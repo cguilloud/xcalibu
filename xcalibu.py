@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 # xcalibu.py
+# Generic Calibration Manager
 #
-# Calibration manager
+# Xcalibu is a class to deal with calibrations.
 #
-
-# Xcalibu is a class to deal with a calibration.
-# The calibration is read from a file storing data as a table.
-#   ex of field : U32BC1G[5.00]=14.05
+# The calibration is read from a file storing information as a table
+# or as a polynom.
 #
-# The class performs the fit of the raw data and furnish a Y=f(X)
-# polynomial function.
+#   ex of field of a table : U32BC1G[5.00]=14.05
 #
-# The class mainly provides the following methode :
+# If using table, the class performs the fit of the raw data and
+# furnishes a y=f(x) polynomial function.
 #
-#  getY(X) which returns the f(X) fitted value.
+# The class mainly provides the following method :
+#
+#   get_y(x) which returns the f(x) fitted value.
 #
 # The fit orded can be set.
-# The reverse function "getX(Y)" is also available.
-# Take care : getX(getY(X)) can not be X due to approximation of fit
-#
+# The reverse function "get_x(y)" is also available.
+# Take care : get_x(get_y(x)) can not be x due to approximation of
+# fitting.
 
 __author__ = "cyril.guilloud@esrf.fr"
 __date__   = "2012 - 2013"
-
 
 # imports python
 import sys
@@ -38,7 +38,7 @@ log = logging.getLogger("XCALIBU")
 LOG_FORMAT='%(name)s - %(levelname)s - %(message)s'
 
 
-class XCalibException(Exception):
+class XCalibError(Exception):
     '''Custom exception class for Xcalibu.'''
     def __init__(self, message):
         self.message = message
@@ -83,8 +83,7 @@ class Xcalibu:
 
         # Calibration file.
         if calib_file:
-            self.loadCalibrationFromFile(calib_file)
-
+            self.load_calibration_from_file(calib_file)
 
     def name(self):
         return self.calib_name
@@ -98,7 +97,7 @@ class Xcalibu:
     def method(self):
         return self._method
 
-    def setMethod(self, method):
+    def set_method(self, method):
         self._method = method
 
     '''
@@ -107,33 +106,33 @@ class Xcalibu:
     def order(self):
         return self._order
 
-    def setOrder(self, order):
+    def set_order(self, order):
         if isinstance( order, int):
             self._order = order
         else:
-            log.error("setOrder : <order> must be an int.")
+            log.error("set_order : <order> must be an int.")
 
 
-    def loadCalibrationFromFile(self, calib_file_name):
+    def load_calibration_from_file(self, calib_file_name):
 
         try:
             _cf = open(calib_file_name, mode='r')
         except IOError:
-            log.critical("Xcalibu : Unable to open file %s"%calib_file_name)
+            log.critical("Xcalibu : Unable to open file %s \n"%calib_file_name)
             exit()
 
         try:
             if self.calib_type() == "TABLE":
-                self.loadTableCalibration(_cf)
+                self.load_table_calib(_cf)
             elif self.calib_type() == "POLY":
-                self.loadPolyCalibration(_cf)
+                self.load_poly_calibration(_cf)
             else:
-                log.error("Calibration type error : %s"%self.calib_type())
+                log.error("Calibration type error : %s \n"%self.calib_type())
             _cf.close()
         except:
             _cf.close()
 
-    def loadTableCalibration(self, calib_file):
+    def load_table_calib(self, calib_file):
         _x_min = float('inf')
         _x_max = -1   # humm on gere que des val positives ???
         _y_min = float('inf')
@@ -179,7 +178,7 @@ class Xcalibu:
         log.debug("Raw X data : %s"%", ".join(map(str, self.x_raw)))
         log.debug("Raw Y data : %s"%", ".join(map(str, self.y_raw)))
 
-    def loadPolyCalibration(self, calib_file):
+    def load_poly_calibration(self, calib_file):
 
         for line in calib_file:
             # Matches lines like :
@@ -189,7 +188,7 @@ class Xcalibu:
             if matchObj:
                 _order = int(matchObj.group(1))
                 print "found order : %d"%_order
-                self.setOrder(_order)
+                self.set_order(_order)
                 self.coeff = numpy.linspace(0,0, _order+1)
 
 
@@ -243,21 +242,21 @@ class Xcalibu:
 
         self.x_fitted = numpy.linspace(self.Xmin, self.Xmax, 50)
         self.y_fitted = numpy.linspace(-100, 100, 50)
-        self.y_fitted = map(self.calcPolyValue, self.x_fitted)
+        self.y_fitted = map(self.calc_poly_value, self.x_fitted)
 
         # Fits reciproque conversion.
         self.coeffR = numpy.polyfit(self.y_raw, self.x_raw, _order)
 
         self.x_fittedR = numpy.linspace(self.Ymin, self.Ymax, 50)
         self.y_fittedR = numpy.linspace(-100, 100, 50)
-        self.y_fittedR = map(self.calcFittedRValue, self.x_fittedR)
+        self.y_fittedR = map(self.calc_fitted_reverse_value, self.x_fittedR)
 
     '''
     Returns the Y value for a given X calculated using the polynom
     coefficients stored in self.coeff list.
     Used for fitting polynoms and for POLY calibrations.
     '''
-    def calcPolyValue(self, x):
+    def calc_poly_value(self, x):
         y = 0
         _order = self.order()
         for ii in range(_order+1):
@@ -265,7 +264,7 @@ class Xcalibu:
 
         return y
 
-    def calcFittedRValue(self, y):
+    def calc_fitted_reverse_value(self, y):
         x = 0
         _order = self.order()
         #print "y=",y
@@ -279,7 +278,7 @@ class Xcalibu:
     Returns Y value interpolated from 2 points.
     For now only linear interpolation.
     '''
-    def calcInterpolatedValue(self, x):
+    def calc_interpolated_value(self, x):
 
         try:
             # Search if there is a matching point.
@@ -299,14 +298,13 @@ class Xcalibu:
             return y
 
 
-
     def plot(self):
         log.info("Plotting")
 
         if self.calib_type() == "POLY":
             self.x_calc = numpy.linspace(self.Xmin, self.Xmax, 50)
             self.y_calc = numpy.linspace(-100, 100, 50)
-            self.y_calc = map(self.calcPolyValue, self.x_calc)
+            self.y_calc = map(self.calc_poly_value, self.x_calc)
 
             plt.plot(self.x_calc, self.y_calc, 'o')
             plt.legend(['calculated curve'], loc='best')
@@ -329,19 +327,19 @@ class Xcalibu:
     Calibration limits
     """
 
-    def minX(self):
+    def min_x(self):
         return self.Xmin
 
-    def maxX(self):
+    def max_x(self):
         return self.Xmax
 
-    def minY(self):
+    def min_y(self):
         return self.Ymin
 
-    def maxY(self):
+    def max_y(self):
         return self.Ymax
 
-    def isInValidXRange(self, x):
+    def is_in_valid_x_range(self, x):
 
         if self.calib_type() == "POLY":
             return True
@@ -352,7 +350,7 @@ class Xcalibu:
         else:
             return True
 
-    def isInValidYRange(self, y):
+    def is_in_valid_y_range(self, y):
 
         # humm bad : would be better to define Ymin Ymax as bounds of
         # a monoton portion of the poly...
@@ -370,46 +368,46 @@ class Xcalibu:
     """
     Values readout
     """
-    def getY(self, x):
+    def get_y(self, x):
         log.debug("Xcalibu - %s - get y of %f"%(self.name(), x))
 
-        if self.isInValidXRange(x):
+        if self.is_in_valid_x_range(x):
             if self.calib_type() == "TABLE":
                 if self.method() == "POLYFIT":
-                    y = self.calcPolyValue(x)
+                    y = self.calc_poly_value(x)
                 elif self.method() == "INTERPOLATION":
-                    y = self.calcInterpolatedValue(x)
+                    y = self.calc_interpolated_value(x)
                 else:
-                    log.error("Unknown or not available reconstruction method : %s"%self.method())
+                    log.error("Unknown or not available reconstruction method : %s"%
+                              self.method())
             elif self.calib_type() == "POLY":
-                y = self.calcPolyValue(x)
+                y = self.calc_poly_value(x)
             else:
                 log.error("Unknown calibration type: %s"%self.calib_type())
 
             log.debug("y=%f"%y)
             return(y)
         else:
-            # raise XCalibException("XValue out of limits [%g;%g]"%(self.Xmin,self.Xmax))
+            # raise XCalibError("XValue out of limits [%g;%g]"%(self.Xmin,self.Xmax))
             log.error("Xcalibu - Error : x=%f is not in valid range for this calibration"%x)
             return (-1)
 
 
-    def getX(self, y):
+    def get_x(self, y):
         '''
         Reciprocal calibration.
         '''
         log.debug("Xcalibu - %s - get x of %f"%(self.name(), y))
 
         # Check validity range
-        if self.isInValidYRange(y):
+        if self.is_in_valid_y_range(y):
             # order 3 poly calcul.
             # TODO : any order ....
-            x = self.calcFittedRValue(y)
-            #x = self.coeffR[3] + self.coeffR[2]*y + self.coeffR[1]*pow(y,2) + self.coeffR[0]*pow(y,3)
+            x = self.calc_fitted_reverse_value(y)
             log.debug("x=%f"%x)
             return(x)
         else:
-            # raise XCalibException("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax))
+            # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax))
             log.error("Xcalibu - Error : y=%f is not in valid range for this R calibration"%y)
             return (-1)
 
@@ -418,12 +416,16 @@ class Xcalibu:
 
 
 def main(args):
+    """
+    Function main provided for demonstration and testing purposes.
+    """
+
     print "--------------------{ Xcalibu }----------------------------------"
 
     from optparse import OptionParser
     parser = OptionParser('xcalibu.py')
     parser.add_option('-d','--debug', type='string',
-                      help='Available levels are :\n CRITICAL(50)\n ERROR(40)\n WARNING(30)\n INFO(20)\n DEBUG(10)',
+                      help="Available levels are :\n CRITICAL(50)\n ERROR(40)\n WARNING(30)\n INFO(20)\n DEBUG(10)", 
                       default='INFO')
     parser.add_option('-p','--printtostdout', action='store_true', default=False,
                       help='Print all log messages to stdout')
@@ -444,58 +446,55 @@ def main(args):
     logging.basicConfig(format=LOG_FORMAT, level=loglevel)
 
 
-
     """
     Demonstrations
     """
 
-
     myCalib1 = Xcalibu("POLY", "./xcalibu_calib_poly.calib", "POLY")
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib1.getY(5)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib1.get_y(5)))
 
 
     myCalib2 = Xcalibu("U32BC1G", "./xcalibu_calib_table_undu.calib", "TABLE", 2, "POLYFIT")
     myCalib2.fit()
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib2.getY(5)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib2.get_y(5)))
 
 
 
     myCalib3 = Xcalibu("B52", "./xcalibu_calib_table.calib", "TABLE", 2, "INTERPOLATION")
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(1, myCalib3.getY(1)))
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(2, myCalib3.getY(2)))
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(4, myCalib3.getY(4)))
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(9, myCalib3.getY(9)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(1, myCalib3.get_y(1)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(2, myCalib3.get_y(2)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(4, myCalib3.get_y(4)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(9, myCalib3.get_y(9)))
     # errors :
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(0.5, myCalib3.getY(0.5)))
-    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(12, myCalib3.getY(12)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(0.5, myCalib3.get_y(0.5)))
+    log.info("Xcalibu - TEST - Gap for %f keV : %f"%(12, myCalib3.get_y(12)))
 
-
-
-#     #log.info("Xcalibu - TEST - Gap for %f keV : %f"%(3, myCalib.getY(3)))
-#     #log.info("Xcalibu - TEST - Gap for %f keV : %f"%(23, myCalib.getY(23)))
-# 
+#     #log.info("Xcalibu - TEST - Gap for %f keV : %f"%(3, myCalib.get_y(3)))
+#     #log.info("Xcalibu - TEST - Gap for %f keV : %f"%(23, myCalib.get_y(23)))
+#
 #     """Tests of reciprocal calibration"""
-#     log.info("Xcalibu - TEST - ene of %f mm gap : %f"%(18.389143, myCalib.getX(18.389143)))
-# 
+#     log.info("Xcalibu - TEST - ene of %f mm gap : %f"%(18.389143, myCalib.get_x(18.389143)))
+#
 #     errors = numpy.linspace(myCalib.Xmin+1, myCalib.Xmax-1, 20)
 #     print "Errors between the 2 calibrations (fit order=%d):"%myCalib.order()
 #     _err_sum = 0
-# 
+#
 #     for ene in errors:
-#         _err = myCalib.getX(myCalib.getY(ene)) - ene
+#         _err = myCalib.get_x(myCalib.get_y(ene)) - ene
 #         _err_sum = _err_sum + abs(_err)
 #         print "%.3g(%.4f%%) "%(_err, _err*100/ene),
 #     print ""
-# 
-#     print "SUM abs error:%g  avg:%g  (%d points)"%(_err_sum, _err_sum/len(errors), len(errors))
+#
+#     print "SUM abs error:%g  avg:%g  (%d points)"%
+#            (_err_sum, _err_sum/len(errors), len(errors))
 #     print ""
-#     print "fitted_val(7) =", myCalib.calcPolyValue(7)
+#     print "fitted_val(7) =", myCalib.calc_poly_value(7)
 #     print ""
 
     myCalib1.plot()
-    
+
     #myCalib2.plot()
-    
+
     #myCalib3.plot()
 
 
