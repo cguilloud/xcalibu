@@ -1,0 +1,15 @@
+# GAP calibration U32B on ID20
+# nov 2012
+# Type POLY
+# Harmonic 1
+# energy 5.0 keV -> 18 keV
+
+
+ORDER = 2
+XMIN = 5
+XMAX = 15
+
+C0 = 28.78
+C1 = -5.57
+C2 =  0.56
+
