@@ -450,12 +450,12 @@ def main(args):
     Demonstrations
     """
 
-    myCalib1 = Xcalibu("POLY", "./xcalibu_calib_poly.calib", "POLY")
+    myCalib1 = Xcalibu("POLY", "./examples/xcalibu_calib_poly.calib", "POLY")
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib1.get_y(5)))
 
 
     myCalib2 = Xcalibu("U32BC1G",
-                       calib_file = "./xcalibu_calib_table_undu.calib",
+                       calib_file = "./examples/xcalibu_calib_table_undu.calib",
                        calib_type = "TABLE",
                        order      = 2,
                        method     = "POLYFIT")
@@ -464,7 +464,7 @@ def main(args):
 
 
 
-    myCalib3 = Xcalibu("B52", "./xcalibu_calib_table.calib", "TABLE", 2, "INTERPOLATION")
+    myCalib3 = Xcalibu("B52", "./examples/xcalibu_calib_table.calib", "TABLE", 2, "INTERPOLATION")
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(1, myCalib3.get_y(1)))
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(2, myCalib3.get_y(2)))
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(4, myCalib3.get_y(4)))
