@@ -454,7 +454,11 @@ def main(args):
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib1.get_y(5)))
 
 
-    myCalib2 = Xcalibu("U32BC1G", "./xcalibu_calib_table_undu.calib", "TABLE", 2, "POLYFIT")
+    myCalib2 = Xcalibu("U32BC1G",
+                       calib_file = "./xcalibu_calib_table_undu.calib",
+                       calib_type = "TABLE",
+                       order      = 2,
+                       method     = "POLYFIT")
     myCalib2.fit()
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib2.get_y(5)))
 
