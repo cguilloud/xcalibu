@@ -91,19 +91,19 @@ class Xcalibu:
     def calib_type(self):
         return self._calib_type
 
-    '''
-    method
-    '''
     def method(self):
+        '''
+        returns fitting method
+        '''
         return self._method
 
     def set_method(self, method):
         self._method = method
 
-    '''
-    order
-    '''
     def order(self):
+        '''
+        Returns fit order for this calibration.
+        '''
         return self._order
 
     def set_order(self, order):
@@ -141,28 +141,42 @@ class Xcalibu:
         xvalues = []
         yvalues = []
 
+        try:
+            for raw_line in calib_file:
+                #log.debug("raw line : %s" % raw_line)
+                line = raw_line.lstrip()
 
-        for line in calib_file:
-            # Matches lines like :
-            # U35M[13.000000]=15.941000
-            matchObj = re.search( r'%s\[(.+)\]=(.+)'%self.name(), line, re.M|re.I)
+                if len(line)==0:
+                    log.debug("empty line : \"%s\"" % line.rstrip())
 
-            if matchObj:
-                log.debug("raw line : %s"%matchObj.group())
-                _xval = float(matchObj.group(1))
-                _yval = float(matchObj.group(2))
-                log.debug("xval : %f   yval : %f"%(_xval, _yval))
-                _nb_points = _nb_points + 1
+                else:
+                    if line[0] != "#":
+                        # Matches lines like :
+                        # U35M[13.000000]=15.941000
+                        matchObj = re.search( r'%s\[(.+)\]=(.+)'%self.name(), line, re.M|re.I)
 
-                xvalues.append(_xval)
-                yvalues.append(_yval)
+                        if matchObj:
+                            log.debug("raw line : %s"%matchObj.group())
+                            _xval = float(matchObj.group(1))
+                            _yval = float(matchObj.group(2))
+                            log.debug("xval : %f   yval : %f"%(_xval, _yval))
+                            _nb_points = _nb_points + 1
 
-                _x_min = min(_xval, _x_min)
-                _x_max = max(_xval, _x_max)
-                _y_min = min(_yval, _y_min)
-                _y_max = max(_yval, _y_max)
-            else:
-                log.debug("nomatch : %s"%line)
+                            xvalues.append(_xval)
+                            yvalues.append(_yval)
+
+                            _x_min = min(_xval, _x_min)
+                            _x_max = max(_xval, _x_max)
+                            _y_min = min(_yval, _y_min)
+                            _y_max = max(_yval, _y_max)
+                        else:
+                            log.debug("nomatch : %s" % line.rstrip())
+                    else:
+                        log.debug("comment or empty line : \"%s\"" % line.rstrip())
+        except:
+            print "Error in parsing..."
+            import traceback
+            traceback.print_exc()
 
         log.info("Xcalibu - Xmin = %g  Xmax = %g  Nb points=%d"%(_x_min, _x_max, _nb_points))
 
@@ -313,7 +327,7 @@ class Xcalibu:
         if self.calib_type() == "TABLE":
             if self.method() == "POLYFIT":
                 plt.plot(self.x_raw, self.y_raw, 'o', self.x_fitted, self.y_fitted,'4')
-                plt.legend(['raw data','fit'], loc='best')
+                plt.legend(['raw data(%s)' % self.name(),'fit(order=%s)' % self.order()], loc='best')
                 plt.show()
             elif self.method() == "INTERPOLATION":
                 p2 = plt.plot(self.x_raw, self.y_raw, 'o', linestyle='-')
@@ -425,7 +439,7 @@ def main(args):
     from optparse import OptionParser
     parser = OptionParser('xcalibu.py')
     parser.add_option('-d','--debug', type='string',
-                      help="Available levels are :\n CRITICAL(50)\n ERROR(40)\n WARNING(30)\n INFO(20)\n DEBUG(10)", 
+                      help="Available levels are :\n CRITICAL(50)\n ERROR(40)\n WARNING(30)\n INFO(20)\n DEBUG(10)",
                       default='INFO')
     parser.add_option('-p','--printtostdout', action='store_true', default=False,
                       help='Print all log messages to stdout')
@@ -463,7 +477,6 @@ def main(args):
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(5, myCalib2.get_y(5)))
 
 
-
     myCalib3 = Xcalibu("B52", "./examples/xcalibu_calib_table.calib", "TABLE", 2, "INTERPOLATION")
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(1, myCalib3.get_y(1)))
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(2, myCalib3.get_y(2)))
@@ -473,33 +486,56 @@ def main(args):
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(0.5, myCalib3.get_y(0.5)))
     log.info("Xcalibu - TEST - Gap for %f keV : %f"%(12, myCalib3.get_y(12)))
 
-#     #log.info("Xcalibu - TEST - Gap for %f keV : %f"%(3, myCalib.get_y(3)))
-#     #log.info("Xcalibu - TEST - Gap for %f keV : %f"%(23, myCalib.get_y(23)))
-#
-#     """Tests of reciprocal calibration"""
-#     log.info("Xcalibu - TEST - ene of %f mm gap : %f"%(18.389143, myCalib.get_x(18.389143)))
-#
-#     errors = numpy.linspace(myCalib.Xmin+1, myCalib.Xmax-1, 20)
-#     print "Errors between the 2 calibrations (fit order=%d):"%myCalib.order()
-#     _err_sum = 0
-#
-#     for ene in errors:
-#         _err = myCalib.get_x(myCalib.get_y(ene)) - ene
-#         _err_sum = _err_sum + abs(_err)
-#         print "%.3g(%.4f%%) "%(_err, _err*100/ene),
-#     print ""
-#
-#     print "SUM abs error:%g  avg:%g  (%d points)"%
-#            (_err_sum, _err_sum/len(errors), len(errors))
-#     print ""
-#     print "fitted_val(7) =", myCalib.calc_poly_value(7)
-#     print ""
 
-    myCalib1.plot()
 
+    myCalibRingTx = Xcalibu("HPZ_RING_TX",
+                       calib_file = "./examples/hpz_ring_Tx.calib",
+                       calib_type = "TABLE",
+                       order      = 5,
+                       method     = "POLYFIT")
+    myCalibRingTx.fit()
+
+
+
+    myCalibRingTy = Xcalibu("HPZ_RING_TY",
+                       calib_file = "./examples/hpz_ring_Ty.calib",
+                       calib_type = "TABLE",
+                       order      = 4,
+                       method     = "POLYFIT")
+    myCalibRingTy.fit()
+
+
+    myCalibRingTz = Xcalibu("HPZ_RING_TZ",
+                       calib_file = "./examples/hpz_ring_Tz.calib",
+                       calib_type = "TABLE",
+                       order      = 20,
+                       method     = "POLYFIT")
+    myCalibRingTz.fit()
+
+
+    myCalibRingRx = Xcalibu("HPZ_RING_RX",
+                       calib_file = "./examples/hpz_ring_Rx.calib",
+                       calib_type = "TABLE",
+                       order      = 5,
+                       method     = "POLYFIT")
+    myCalibRingRx.fit()
+
+    myCalibRingRy = Xcalibu("HPZ_RING_RY",
+                       calib_file = "./examples/hpz_ring_Ry.calib",
+                       calib_type = "TABLE",
+                       order      = 5,
+                       method     = "POLYFIT")
+    myCalibRingRy.fit()
+
+    #myCalib1.plot()
     #myCalib2.plot()
-
     #myCalib3.plot()
+
+    #myCalibRingTx.plot()
+    myCalibRingTy.plot()
+    #myCalibRingTz.plot()
+    #myCalibRingRx.plot()
+    #myCalibRingRy.plot()
 
 
 if __name__ == "__main__":
