@@ -240,9 +240,9 @@ class Xcalibu:
 
     def fit(self):
 
-        if self.method() is not "POLYFIT":
-            print "hummm : fit not needed..."
-
+        if self.method() != "POLYFIT":
+            print "hummm : fit not needed... (method=%s)" % self.method()
+            # print type(self.method())
         _order = self.order()
         self.coeff  = None
         self.coeffR = None
@@ -264,6 +264,14 @@ class Xcalibu:
         self.x_fittedR = numpy.linspace(self.Ymin, self.Ymax, 50)
         self.y_fittedR = numpy.linspace(-100, 100, 50)
         self.y_fittedR = map(self.calc_fitted_reverse_value, self.x_fittedR)
+
+
+    def get_raw_x(self):
+        return self.x_raw
+
+    def get_raw_y(self):
+        return self.y_raw
+
 
     '''
     Returns the Y value for a given X calculated using the polynom
