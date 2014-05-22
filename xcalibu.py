@@ -148,6 +148,7 @@ class Xcalibu:
         arg in : void
         arg out : int
         """
+        print "calib_order=", self._calib_order
         return self._calib_order
 
     def set_calib_order(self, order):
@@ -478,9 +479,8 @@ class Xcalibu:
             log.debug("y=%f" % y)
             return(y)
         else:
-            # raise XCalibError("XValue out of limits [%g;%g]"%(self.Xmin,self.Xmax))
             log.error("Xcalibu - Error : x=%f is not in valid range for this calibration" % x)
-            return (-1)
+            raise XCalibError("XValue %g out of limits [%g;%g]"%(x, self.Xmin, self.Xmax))
 
     def get_x(self, y):
         """

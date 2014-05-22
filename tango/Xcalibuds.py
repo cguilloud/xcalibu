@@ -5,6 +5,7 @@ import PyTango
 import traceback
 import sys
 
+from xcalibu import XCalibError
 import xcalibu
 
 import logging
@@ -51,29 +52,20 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         # Gets calibration file name from device properties
         self.calib_file_name  = self.device_property_list['file'][2]
-        self.calib_type  = self.device_property_list['type'][2]
-        self.calib_name  = self.device_property_list['name'][2]
-        print "file to load : %s" % self.calib_file_name
-        print "type : %s" % self.calib_type
+        self.fit_order = int(self.device_property_list['fit_order'][2])
+        self.fit_method = self.device_property_list['fit_method'][2][0]
+        self.debug_stream("file to load = %s" % self.calib_file_name)
+        self.debug_stream("fit_order = %d" % self.fit_order)
+        self.debug_stream("fit_method = %s" % self.fit_method)
 
-        if self.calib_type == "TABLE":
-            self.calib_order = self.device_property_list['order'][2]
-            self.calib_method = self.device_property_list['method'][2]
-            print "order=", self.calib_order
-            print "method=",self.method
+        # Loads a calibration.
+        self.calib = xcalibu.Xcalibu( self.calib_file_name,
+                                      self.fit_order,
+                                      self.fit_method )
 
-            # Loads a TABLE calibration.
-            self.calib = xcalibu.Xcalibu(self.calib_name,
-                                         self.calib_file_name,
-                                         "TABLE",
-                                         self.calib_order,
-                                         self.calib_method )
+        if self.calib.get_calib_type() == "TABLE":
+            self.info_stream("fits TABLE calib.")
             self.calib.fit()
-        else:
-            # Loads a POLY calibration.
-            self.calib = xcalibu.Xcalibu("cNaMe",
-                                         self.calib_file_name,
-                                         "POLY" )
 
 
     def always_executed_hook(self):
@@ -115,11 +107,37 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.debug_stream("In read_Ymax()")
         attr.set_value(self.calib.max_y())
 
+    def read_calib_order(self, attr):
+        self.debug_stream("In read_calib_order()")
+        try:
+            attr.set_value(self.calib.get_calib_order())
+        except:
+            import traceback
+            traceback.print_exc()
 
-    def read_poly_order(self, attr):
-        self.debug_stream("In read_poly_order()")
-        attr.set_value(self.calib.order())
+    def read_calib_type(self, attr):
+        self.debug_stream("In read_calib_type()")
+        try:
+            attr.set_value(self.calib.get_calib_type())
+        except:
+            import traceback
+            traceback.print_exc()
 
+    def read_calib_name(self, attr):
+        self.debug_stream("In read_calib_name()")
+        try:
+            attr.set_value(self.calib.get_name())
+        except:
+            import traceback
+            traceback.print_exc()
+
+    def read_fit_order(self, attr):
+        self.debug_stream("In read_fit_order()")
+        try:
+            attr.set_value(self.calib.get_fit_order())
+        except:
+            import traceback
+            traceback.print_exc()
 
     def read_Xdata(self, attr):
         self.debug_stream("In read_Xdata()")
@@ -166,8 +184,13 @@ class Xcalibuds(PyTango.Device_4Impl):
         :return: Y value of the calibration if X in valid range.
         :rtype: PyTango.DevFloat """
         self.debug_stream("In get_y()")
-        argout = self.calib.get_y(argin)
 
+        try:
+            argout = self.calib.get_y(argin)
+        except XCalibError:
+            self.error_stream( str(sys.exc_info()[1]))
+            argout = -666
+            raise
         return argout
 
     def get_x(self, argin):
@@ -215,7 +238,7 @@ class XcalibudsClass(PyTango.DeviceClass):
     #    Class Properties
     class_property_list = {
         'log_level':
-        [PyTango.DevShort, "log level for Xcalibu lib",
+        [PyTango.DevShort, "log level for Xcalibu lib (in {10; 20; 30; 40; 50})",
          [50] ],
         }
 
@@ -224,24 +247,12 @@ class XcalibudsClass(PyTango.DeviceClass):
         'file':
         [PyTango.DevString, "path+ filename of the calibration file",
          ["./tutu.calib"] ],
-
-        'name':
-        [PyTango.DevString, "name of the calibration",
-         ["TTT"] ],
-
-        'type':
-        [PyTango.DevString, "calibration type : POLY or TABLE",
-         ["TABLE"] ],
-
-        'order':
+        'fit_order':
         [PyTango.DevShort, "order of the poly for TABLE calibration fitting",
          [2] ],
-
-
-        'method':
+        'fit_method':
         [PyTango.DevString, "data reconstruction method : INTERPOLATION or POLYFIT",
          ["POLYFIT"] ],
-
         }
 
     #    Command definitions
@@ -294,6 +305,7 @@ class XcalibudsClass(PyTango.DeviceClass):
                 'unit': " ",
                 'description': "minimal valid Y value of current calibration ",
             } ],
+
         'Ymax':
             [[PyTango.DevFloat,
             PyTango.SCALAR,
@@ -303,14 +315,45 @@ class XcalibudsClass(PyTango.DeviceClass):
                 'unit': " ",
                 'description': "maximal valid Y value of current calibration ",
             } ],
-        'poly_order':
+
+        'calib_order':
             [[PyTango.DevShort,
             PyTango.SCALAR,
             PyTango.READ],
             {
                 'format': "%d",
                 'unit': " ",
-                'description': "Order of the given calibration polynom.",
+                'description': "Order of the given calibration.",
+            } ],
+
+        'fit_order':
+            [[PyTango.DevShort,
+            PyTango.SCALAR,
+            PyTango.READ],
+            {
+                'format': "%d",
+                'unit': " ",
+                'description': "Order of the polynomia to use to fit raw data.",
+            } ],
+
+        'calib_type':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ],
+            {
+                'format': "%s",
+                'unit': " ",
+                'description': "Type of the given calibration : TABLE or POLY",
+            } ],
+
+        'calib_name':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ],
+            {
+                'format': "%s",
+                'unit': " ",
+                'description': "Name of the calibration read from calib file",
             } ],
 
          'Xdata':
@@ -329,8 +372,6 @@ class XcalibudsClass(PyTango.DeviceClass):
                 'description': "Y raw data",
             } ],
         }
-
-
 
 def main():
 
