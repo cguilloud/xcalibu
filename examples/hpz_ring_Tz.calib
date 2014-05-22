@@ -1,5 +1,10 @@
 # Hexapiezo ring errors calibration file
 
+CALIB_NAME = HPZ_RING_TZ
+CALIB_TYPE = TABLE
+CALIB_TIME = 1400081171.300155
+
+
 # HPZ_RING_TZ[deg]= Tz error
 
 HPZ_RING_TZ[0]=0.0805400454005962

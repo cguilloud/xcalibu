@@ -2,7 +2,11 @@
 # nov 2012
 # Type TABLE
 # Harmonic 1
-# energy 5.0 keV -> 18 keV
+# energy 5.0 keV -> 10.5 keV
+
+CALIB_NAME = U32BC1G
+CALIB_TYPE = TABLE
+CALIB_TIME = 1400750927.375192
 
 U32BC1G[5.00]=14.05
 U32BC1G[5.50]=14.98
