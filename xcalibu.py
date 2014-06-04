@@ -24,7 +24,7 @@
 # fitting.
 
 __author__ = "cyril.guilloud@esrf.fr"
-__date__ = "2012 - 2013 - 2014"
+__date__   = "2012 - 2013 - 2014"
 
 # imports python
 import sys
