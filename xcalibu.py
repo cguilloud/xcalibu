@@ -25,7 +25,7 @@
 
 __author__  = "cyril.guilloud@esrf.fr"
 __date__    = "2012 - 2013 - 2014"
-__version__ = "0.01"
+__version__ = "0.02"
 
 # imports python
 import sys
