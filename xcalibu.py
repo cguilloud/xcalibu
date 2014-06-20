@@ -23,8 +23,9 @@
 # Take care : get_x(get_y(x)) can not be x due to approximation of
 # fitting.
 
-__author__ = "cyril.guilloud@esrf.fr"
-__date__ = "2012 - 2013 - 2014"
+__author__  = "cyril.guilloud@esrf.fr"
+__date__    = "2012 - 2013 - 2014"
+__version__ = "0.03"
 
 import sys
 import numpy
