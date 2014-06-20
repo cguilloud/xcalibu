@@ -54,9 +54,9 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.calib_file_name  = self.device_property_list['file'][2]
         self.fit_order = int(self.device_property_list['fit_order'][2])
         self.fit_method = self.device_property_list['fit_method'][2][0]
-        self.debug_stream("file to load = %s" % self.calib_file_name)
-        self.debug_stream("fit_order = %d" % self.fit_order)
-        self.debug_stream("fit_method = %s" % self.fit_method)
+        self.info_stream("file to load = %s" % self.calib_file_name)
+        self.info_stream("fit_order = %d" % self.fit_order)
+        self.info_stream("fit_method = %s" % self.fit_method)
 
         # Loads a calibration.
         self.calib = xcalibu.Xcalibu( self.calib_file_name,
@@ -126,7 +126,15 @@ class Xcalibuds(PyTango.Device_4Impl):
     def read_calib_name(self, attr):
         self.debug_stream("In read_calib_name()")
         try:
-            attr.set_value(self.calib.get_name())
+            attr.set_value(self.calib.get_calib_name())
+        except:
+            import traceback
+            traceback.print_exc()
+
+    def read_calib_description(self, attr):
+        self.debug_stream("In read_calib_description()")
+        try:
+            attr.set_value(self.calib.get_calib_description())
         except:
             import traceback
             traceback.print_exc()
@@ -167,15 +175,6 @@ class Xcalibuds(PyTango.Device_4Impl):
     #-----------------------------------------------------------------------------
     #    Motor command methods
     #-----------------------------------------------------------------------------
-    def On(self):
-        """ Enable DS...
-
-        :param :
-        :type: PyTango.DevVoid
-        :return:
-        :rtype: PyTango.DevVoid """
-        self.debug_stream("In On()")
-
     def get_y(self, argin):
         """ Returns the Y value of calibration corresponding to X argin.
 
@@ -257,9 +256,6 @@ class XcalibudsClass(PyTango.DeviceClass):
 
     #    Command definitions
     cmd_list = {
-        'On':
-            [[PyTango.DevVoid, "none"],
-            [PyTango.DevVoid, "none"]],
         'get_y':
             [[PyTango.DevFloat, "x value"],
             [PyTango.DevFloat, "y value"]],
@@ -354,6 +350,16 @@ class XcalibudsClass(PyTango.DeviceClass):
                 'format': "%s",
                 'unit': " ",
                 'description': "Name of the calibration read from calib file",
+            } ],
+
+        'calib_description':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ],
+            {
+                'format': "%s",
+                'unit': " ",
+                'description': "Description of the calibration read from calib file",
             } ],
 
          'Xdata':
