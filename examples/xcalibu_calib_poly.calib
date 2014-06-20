@@ -10,6 +10,7 @@ CALIB_TIME = 1400076973.280716
 CALIB_ORDER = 2
 CALIB_XMIN = 5
 CALIB_XMAX = 15
+CALIB_DESC = "un polynome d'ordre 2 qui fait une parabole !"
 
 C0 = 28.78
 C1 = -5.57
