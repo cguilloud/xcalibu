@@ -30,12 +30,44 @@ __version__ = "0.03"
 import sys
 import numpy
 import time
+import datetime
 import re
 import matplotlib.pyplot as plt
 
 import logging
 log = logging.getLogger("XCALIBU")
 LOG_FORMAT = '%(name)s - %(levelname)s - %(message)s'
+
+
+def duration_format(duration):
+    """
+    Returns a string to pretty print <duration> in us ms or s
+    depending on <duration> value.
+    """
+
+    us = 1000*duration - int(1000*duration)
+    ms = duration - int(duration)
+    (mn, seconds) = divmod(duration, 60)
+    seconds = int(seconds)
+    (hours, minutes) = divmod (mn, 60)
+
+    _duration_str = ""
+    if us != 0:
+        _duration_str = " %dus"%(us*1000) + _duration_str
+
+    if ms > 0:
+        _duration_str = " %dms"%(ms*1000) + _duration_str
+
+    if seconds > 0:
+        _duration_str = " %gs"%seconds + _duration_str
+
+    if mn > 0:
+        _duration_str = "%dmn"%minutes + _duration_str
+
+    if hours > 0:
+        _duration_str = "%dh "%hours + _duration_str
+
+    return _duration_str
 
 
 class XCalibError(Exception):
@@ -100,8 +132,14 @@ class Xcalibu:
             _cf.close()
 
         # Fits only if needed.
-        if self.get_calib_type() == "TABLE":
+        if self.get_calib_type() == "TABLE" and self.get_fit_method() == "POLYFIT":
+            _time0 = time.time()
             self.fit()
+            # Fit duration display
+            _fit_duration = time.time() - _time0
+            log.info("Xcalibu - Fitting took %s" % duration_format(_fit_duration))
+        else:
+            log.info("Xcalibu - NO FIT")
 
     """
     attributes access methods
@@ -365,7 +403,6 @@ class Xcalibu:
         self.coeffs = None
         self.coeffR = None
 
-        _time0 = time.time()
 
         # Fits direct conversion.
         try:
@@ -373,11 +410,12 @@ class Xcalibu:
         except numpy.RankWarning:
             print "not enought data"
 
-        log.info("Xcalibu - Fitting took %g seconds" % (time.time() - _time0))
 
+        log.info("Xcalibu -  polynom coeffs = " )
+        self.coeffs
         _o = 0
         for _c in reversed(self.coeffs):
-            log.info("Xcalibu -  polynom coeffs X%d = %s" % (_o, _c))
+            log.debug("Xcalibu -  polynom coeffs X%d = %s" % (_o, _c))
             _o += 1
 
         self.x_fitted = numpy.linspace(self.Xmin, self.Xmax, 50)
@@ -667,10 +705,35 @@ def main(args):
         # new way to load calibrations.
         myCalib = Xcalibu(calib_file_name=_calib_file,
                           fit_order=9,
-                          fit_method="POLYFIT")
+                          #fit_method="POLYFIT")
+                          fit_method="INTERPOLATION")
 
-        if myCalib.get_calib_type() == "TABLE":
-            myCalib.fit()
+        # Some calib parameters:
+        _xmin = myCalib.min_x()
+        _xmax = myCalib.max_x()
+        _xrange = _xmax - _xmin
+
+        # Example : caluculation of middel point of calibration.
+        _xtest = (_xmin + _xmax ) / 2
+        _time0 = time.time()
+        _ytest = myCalib.get_y(_xtest)
+        _calc_duration = time.time() - _time0
+
+        log.info( "y value of %g = %g (%s)" % (_xtest, _ytest, duration_format(_calc_duration)))
+
+        _NB_POINTS = 25000
+        # Example : calculation of _NB_POINTS points.
+        _time0 = time.time()
+        from numpy import arange
+        for xx in arange(_xmin, _xmax, _xrange/_NB_POINTS):
+            yy = myCalib.get_y(xx)
+            # print " f(%06.3f)=%06.3f   "%(xx, yy),
+        _Ncalc_duration = time.time() - _time0
+
+        log.info( "%d values of y ; duration : %s" % (_NB_POINTS, duration_format(_Ncalc_duration)))
+
+        sys.stdout.flush()
+
 
         if options.plot:
             myCalib.plot()
