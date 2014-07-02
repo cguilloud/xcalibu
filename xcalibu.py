@@ -730,7 +730,7 @@ def main(args):
             # print " f(%06.3f)=%06.3f   "%(xx, yy),
         _Ncalc_duration = time.time() - _time0
 
-        log.info( "%d values of y ; duration : %s" % (_NB_POINTS, duration_format(_Ncalc_duration)))
+        log.info( "Calculation of %d values of y. duration : %s" % (_NB_POINTS, duration_format(_Ncalc_duration)))
 
         sys.stdout.flush()
 
