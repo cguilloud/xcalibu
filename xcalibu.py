@@ -20,12 +20,11 @@
 #
 # The fit orded can be set.
 # The reverse function "get_x(y)" is also available.
-# Take care : get_x(get_y(x)) can not be x due to approximation of
-# fitting.
+# Take care : get_x(get_y(x)) can be different from x due to
+# approximation of fitting.
 
 __author__ = "cyril.guilloud@esrf.fr"
 __date__ = "2012-2014"
-__version__ = "0.03"
 
 import sys
 import numpy
@@ -59,10 +58,10 @@ class Xcalibu:
         self._calib_order = 0
         self._fit_order = None
 
-        self.Xmin = 0
-        self.Xmax = 0
-        self.Ymin = 0
-        self.Ymax = 0
+        self.Xmin = 0.0
+        self.Xmax = 0.0
+        self.Ymin = 0.0
+        self.Ymax = 0.0
 
         # Poly order to be used by reconstruction method for TABLE calibrations.
         if fit_order:
@@ -71,11 +70,11 @@ class Xcalibu:
         # Reconstruction method for TABLE calibrations:
         # *INTERPOLATION : interpolation segment by segment.
         #  or
-        # *POLYFIT : polynomial fitting of dataset.
+        # *POLYFIT : polynomial fitting of the dataset.
         if fit_method:
             self._fit_method = fit_method
 
-        # Try to open calib file.
+        # Try to open the calibration file.
         try:
             _cf = open(calib_file_name, mode='r')
         except IOError:
@@ -100,7 +99,7 @@ class Xcalibu:
         finally:
             _cf.close()
 
-        # Fits only if needed.
+        # Fits if needed.
         if self.get_calib_type() == "TABLE" and self.get_fit_method() == "POLYFIT":
             _time0 = time.time()
             self.fit()
@@ -108,7 +107,7 @@ class Xcalibu:
             _fit_duration = time.time() - _time0
             log.info("Xcalibu - Fitting took %s" % timedisplay.duration_format(_fit_duration))
         else:
-            log.info("Xcalibu - NO FIT")
+            log.info("Xcalibu - POLY or INTERPOLATION => NO FIT")
 
     """
     attributes access methods
@@ -231,7 +230,7 @@ class Xcalibu:
                 # string.whitespace -> '\t\n\x0b\x0c\r '
                 line = raw_line.lstrip()
 
-                # Line empty or full of space(s).
+                # Line is empty or full of space(s).
                 if len(line) == 0:
                     log.debug("line %4d%s : empty" % (_ligne_nb, _part_letter))
                     continue
@@ -242,7 +241,7 @@ class Xcalibu:
                     continue
 
                 # Matches lines like :
-                # CALIB_xxxx = YYYY
+                # CALIB_<info> = <value>
                 matchCalibInfo = re.search(r'CALIB_(\w+)(?: )*=(?: )*(.+)', line)
                 if matchCalibInfo:
                     _header_line_nb = _header_line_nb + 1
