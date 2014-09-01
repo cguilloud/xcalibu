@@ -1,9 +1,12 @@
 
-
 Xcalibu is a python library to manage calibrations tables or polynomia.
 
 xcalibu.py : python library 
 Xcalibuds.py : PyTango device server
+
+usage :
+./xcalibu.py -p
+./xcalibu.py -v
 
 Cyril Guilloud ESRF BLISS 2013 2014
 
