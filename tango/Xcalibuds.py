@@ -5,7 +5,6 @@ import PyTango
 import traceback
 import sys
 
-from xcalibu import XCalibError
 import xcalibu
 
 import logging
@@ -52,7 +51,8 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         # Gets calibration file name from device properties
         self.calib_file_name  = self.device_property_list['file'][2]
-        self.fit_order = int(self.device_property_list['fit_order'][2])
+        print int(self.device_property_list['fit_order'][2][0])
+        self.fit_order = int(self.device_property_list['fit_order'][2][0])
         self.fit_method = self.device_property_list['fit_method'][2][0]
         self.info_stream("file to load = %s" % self.calib_file_name)
         self.info_stream("fit_order = %d" % self.fit_order)
@@ -186,7 +186,7 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         try:
             argout = self.calib.get_y(argin)
-        except XCalibError:
+        except xcalibu.XCalibError:
             self.error_stream( str(sys.exc_info()[1]))
             argout = -666
             raise
@@ -245,7 +245,7 @@ class XcalibudsClass(PyTango.DeviceClass):
     device_property_list = {
         'file':
         [PyTango.DevString, "path+ filename of the calibration file",
-         ["./tutu.calib"] ],
+         ["/users/blissadm/local/userconf/xcalibu/tutu.calib"] ],
         'fit_order':
         [PyTango.DevShort, "order of the poly for TABLE calibration fitting",
          [2] ],

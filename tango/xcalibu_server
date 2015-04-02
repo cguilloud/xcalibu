@@ -3,11 +3,11 @@
 import os
 import sys
 
-sys.argv[0] = "Xcalibu"
+sys.argv[0] = "Xcalibuds"
 
 if len(sys.argv) == 1:
     # no args ? -> I add "-?" to show defined instances.
     sys.argv.append("-?")
 
-execfile("/users/blissadm/server/src/Xcalibu.py")
+execfile("/users/blissadm/server/src/Xcalibuds.py")
 

@@ -24,25 +24,25 @@ DEV_PATH=${PWD}
 # Copy of files from current git repository.
 install:
         ####  install of the py module.
-        python setup.py install
+	python setup.py install
 
         ####  config dir and template files.
-        mkdir -p ${TEMPLATES_PATH}
-        chmod 777 ${CONFIG_PATH}
-        cp examples/*.calib ${TEMPLATES_PATH}
+	mkdir -p ${TEMPLATES_PATH}
+	chmod 777 ${CONFIG_PATH}
+	cp examples/*.calib ${TEMPLATES_PATH}
 
         ####  tango server and startup-script
-        mkdir -p ${BLISSADM_PATH}/server/src
+	mkdir -p ${BLISSADM_PATH}/server/src
 
         # startup script
-        touch ${BLISSADM_PATH}/server/src/xcalibu_server
-        mv ${BLISSADM_PATH}/server/src/xcalibu_server ${BLISSADM_PATH}/server/src/xcalibu_server.bup
-        cp tango/xcalibu_server ${BLISSADM_PATH}/server/src/xcalibu_server
+	touch ${BLISSADM_PATH}/server/src/xcalibu_server
+	mv ${BLISSADM_PATH}/server/src/xcalibu_server ${BLISSADM_PATH}/server/src/xcalibu_server.bup
+	cp tango/xcalibu_server ${BLISSADM_PATH}/server/src/xcalibu_server
 
         # tango DS
-        touch ${BLISSADM_PATH}/server/src/Xcalibu.py
-        mv ${BLISSADM_PATH}/server/src/Xcalibu.py ${BLISSADM_PATH}/server/src/Xcalibu.py.pub
-        cp Xcalibu.py ${BLISSADM_PATH}/server/src/Xcalibu.py
+	touch ${BLISSADM_PATH}/server/src/Xcalibuds.py
+	mv ${BLISSADM_PATH}/server/src/Xcalibuds.py ${BLISSADM_PATH}/server/src/Xcalibuds.py.bup
+	cp tango/Xcalibuds.py ${BLISSADM_PATH}/server/src/Xcalibuds.py
 
 
 #        ####  Spec macros
