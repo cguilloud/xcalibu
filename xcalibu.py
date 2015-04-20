@@ -100,6 +100,7 @@ class Xcalibu:
             _cf.close()
 
         # Fits if needed.
+        log.info("get_calib_type=\"%s\" get_fit_method=\"%s\" " % (self.get_calib_type(), self.get_fit_method()))
         if self.get_calib_type() == "TABLE" and self.get_fit_method() == "POLYFIT":
             _time0 = time.time()
             self.fit()
@@ -365,7 +366,8 @@ class Xcalibu:
             return
 
         if self.get_fit_method() != "POLYFIT":
-            print "hummm : fit not needed... (method=%s)" % self.get_fit_method()
+            print "[xcalibu.py] hummm : fit not needed... (method=%s)" % self.get_fit_method()
+            return
 
         _order = self.get_fit_order()
         self.coeffs = None
