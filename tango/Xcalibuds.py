@@ -11,11 +11,21 @@ import logging
 log = logging.getLogger("Xcalibuds ")
 LOG_FORMAT='%(name)s - %(levelname)s - %(message)s'
 
+class bcolors:
+    PINK = '\033[95m'
+    BLUE = '\033[94m'
+    YELLOW = '\033[93m'
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    ENDC = '\033[0m'
+
 class Xcalibuds(PyTango.Device_4Impl):
     def __init__(self,cl, name):
         PyTango.Device_4Impl.__init__(self,cl,name)
 
         self.debug_stream("In __init__()")
+        self._ds_name = name
+
         self.init_device()
 
     def delete_device(self):
@@ -65,8 +75,9 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         if self.calib.get_calib_type() == "TABLE":
             self.info_stream("fits TABLE calib.")
-            self.calib.fit()
+            # self.calib.fit()
 
+        print "Device " + bcolors.PINK + self._ds_name + bcolors.ENDC + " initialized."
 
     def always_executed_hook(self):
         self.debug_stream("In always_excuted_hook()")
