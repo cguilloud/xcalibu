@@ -61,9 +61,9 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         # Gets calibration file name from device properties
         self.calib_file_name  = self.device_property_list['file'][2]
-        print int(self.device_property_list['fit_order'][2][0])
-        self.fit_order = int(self.device_property_list['fit_order'][2][0])
-        self.fit_method = self.device_property_list['fit_method'][2][0]
+        self.fit_order = int(self.device_property_list['fit_order'][2])
+        self.fit_method = self.device_property_list['fit_method'][2]
+
         self.info_stream("file to load = %s" % self.calib_file_name)
         self.info_stream("fit_order = %d" % self.fit_order)
         self.info_stream("fit_method = %s" % self.fit_method)
