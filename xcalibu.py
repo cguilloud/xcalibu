@@ -372,7 +372,7 @@ class Xcalibu:
                 raise XCalibError("No data ligne read in calib file.")
             else:
                 self._data_lines = _data_ligne_nb
-                log.info("DATA lines read : %d" %self._data_lines)
+                log.info("DATA lines read : %d" % self._data_lines)
 
         except XCalibError:
             print "\n--------------- ERROR IN PARSING --------------------"
@@ -592,7 +592,7 @@ class Xcalibu:
     def max_y(self):
         return self.Ymax
 
-    def data_lines(self):
+    def dataset_size(self):
         return self._data_lines
 
     def is_in_valid_x_range(self, x):

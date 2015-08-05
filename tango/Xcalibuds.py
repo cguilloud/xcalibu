@@ -140,9 +140,9 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.debug_stream("In read_Ymax()")
         attr.set_value(self.calib.max_y())
 
-    def read_data_lines(self, attr):
-        self.debug_stream("In read_data_lines()")
-        attr.set_value(self.calib.data_lines())
+    def read_dataset_size(self, attr):
+        self.debug_stream("In read_dataset_size()")
+        attr.set_value(self.calib.dataset_size())
 
     def read_calib_order(self, attr):
         self.debug_stream("In read_calib_order()")
@@ -357,7 +357,7 @@ class XcalibudsClass(PyTango.DeviceClass):
                 'description': "maximal valid Y value of current calibration ",
             } ],
 
-        'data_lines':
+        'dataset_size':
             [[PyTango.DevLong,
             PyTango.SCALAR,
             PyTango.READ],
@@ -365,7 +365,7 @@ class XcalibudsClass(PyTango.DeviceClass):
                 'format': "%d",
                 'unit': " ",
                 'min alarm': "0",
-                'description': "number of data (matching lines in .calib files)",
+                'description': "Number of data (~matching lines in .calib files)",
             } ],
 
         'calib_order':
