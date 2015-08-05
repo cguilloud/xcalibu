@@ -79,7 +79,7 @@ class Xcalibu:
         """
         # Calib file name.
         if calib_file_name:
-            self._calib_file_name = calib_file_name
+            self.set_calib_file_name(calib_file_name)
 
         # Poly order to be used by reconstruction method for TABLE calibrations.
         if fit_order:
@@ -99,19 +99,12 @@ class Xcalibu:
             # A file name is defined, try to load the calib.
             self.load_calib()
 
-        if self.get_calib_type() == "TABLE" and self.get_reconstruction_method() == "POLYFIT":
-            # Fits data if needed.
-            #log.info("get_calib_type=\"%s\" get_reconstruction_method=\"%s\" " %
-            #         (self.get_calib_type(), self.get_reconstruction_method()))
-            self.fit()
-        else:
-            log.info("Xcalibu - POLY or INTERPOLATION => NO FIT")
-
 
     def set_calib_file_name(self, fn):
         """
         Sets the name of the file to use to save calibration.
         """
+        print "calibv file name set : %s " % fn
         self._calib_file_name = fn
 
     def get_calib_file_name(self):
@@ -259,7 +252,7 @@ class Xcalibu:
         except IOError:
             raise XCalibError("Unable to open file '%s' \n" % _calib_file_name)
         except:
-            raise XCalibError("error in calibration loading")
+            raise XCalibError("error in calibration loading (file=%s)" % _calib_file_name)
 
         try:
             for raw_line in calib_file:
@@ -406,6 +399,16 @@ class Xcalibu:
 
         log.debug("Raw X data : %s" % ", ".join(map(str, self.x_raw)))
         log.debug("Raw Y data : %s" % ", ".join(map(str, self.y_raw)))
+
+
+        if self.get_calib_type() == "TABLE" and self.get_reconstruction_method() == "POLYFIT":
+            # Fits data if needed.
+            #log.info("get_calib_type=\"%s\" get_reconstruction_method=\"%s\" " %
+            #         (self.get_calib_type(), self.get_reconstruction_method()))
+            self.fit()
+        else:
+            log.info("Xcalibu - POLY or INTERPOLATION => NO FIT")
+
 
     def fit(self):
         if self.get_calib_type() == "POLY":

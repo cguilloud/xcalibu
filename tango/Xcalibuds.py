@@ -51,7 +51,7 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         # -v5 (level == 600) -> more info on cache ???
 
-        # bof ?
+        # log level linked to DS log level.
         self.db = PyTango.Database()
         try:
             self.log_level  = int(self.db.get_class_property("Xcalibuds", "log_level")['log_level'][0])
