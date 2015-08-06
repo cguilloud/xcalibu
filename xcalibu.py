@@ -406,8 +406,15 @@ class Xcalibu:
             #log.info("get_calib_type=\"%s\" get_reconstruction_method=\"%s\" " %
             #         (self.get_calib_type(), self.get_reconstruction_method()))
             self.fit()
-        else:
-            log.info("Xcalibu - POLY or INTERPOLATION => NO FIT")
+        elif self.get_calib_type() == "TABLE" and self.get_reconstruction_method() == "INTERPOLATION":
+            log.info("Xcalibu - TABLE + INTERPOLATION => NO FIT")
+        elif self.get_calib_type() == "POLY":
+            log.info("Xcalibu - POLY => NO FIT")
+
+            # Sets Y range.
+            self.Ymin = self.get_y(self.Xmin)
+            self.Ymax = self.get_y(self.Xmax)
+
 
 
     def fit(self):
