@@ -39,21 +39,36 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         # From here we can get properties.
 
-        # -v1
+        # no -v : level == 100
+        # -v1 v2  (level==500)
         self.info_stream( "INFO  STREAM ON +++++++++++++++++++++++++++++++++++++")
         self.warn_stream( "WARN  STREAM ON +++++++++++++++++++++++++++++++++++++")
         self.error_stream("ERROR STREAM ON +++++++++++++++++++++++++++++++++++++")
         self.fatal_stream("FATAL STREAM ON +++++++++++++++++++++++++++++++++++++")
 
-        # -v4
+        # -v3 v4 (level == 600)
         self.debug_stream("DEBUG STREAM ON +++++++++++++++++++++++++++++++++++++")
 
-        # bof ?
+        # -v5 (level == 600) -> more info on cache ???
+
+        # log level linked to DS log level.
         self.db = PyTango.Database()
         try:
             self.log_level  = int(self.db.get_class_property("Xcalibuds", "log_level")['log_level'][0])
         except:
-            self.log_level  = 50
+            logger = self.get_logger()
+            level_number = logger.get_level()
+            level_name = PyTango.Level.get_name(level_number)
+
+            print("tango log level = %d / %s " %(level_number, level_name))
+
+            if level_number < 101:
+                self.log_level  = 40
+            elif level_number < 501:
+                self.log_level  = 20
+            else:
+                self.log_level  = 10
+
         self.info_stream("log_level set to %d"%self.log_level)
 
         # calibu logging
@@ -61,17 +76,24 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         # Gets calibration file name from device properties
         self.calib_file_name  = self.device_property_list['file'][2]
-        self.fit_order = int(self.device_property_list['fit_order'][2])
-        self.fit_method = self.device_property_list['fit_method'][2]
+        try:
+            self.fit_order = int(self.device_property_list['fit_order'][2])
+        except:
+            print "no \"fit_order\" tango property found"
+
+        try:
+            self.reconstruction_method = self.device_property_list['reconstruction_method'][2][0]
+        except:
+            print "no \"reconstruction_method\" Tango propery found"
 
         self.info_stream("file to load = %s" % self.calib_file_name)
         self.info_stream("fit_order = %d" % self.fit_order)
-        self.info_stream("fit_method = %s" % self.fit_method)
+        self.info_stream("reconstruction_method = %s" % self.reconstruction_method)
 
         # Loads a calibration.
         self.calib = xcalibu.Xcalibu( self.calib_file_name,
                                       self.fit_order,
-                                      self.fit_method )
+                                      self.reconstruction_method )
 
         if self.calib.get_calib_type() == "TABLE":
             self.info_stream("fits TABLE calib.")
@@ -117,6 +139,10 @@ class Xcalibuds(PyTango.Device_4Impl):
     def read_Ymax(self, attr):
         self.debug_stream("In read_Ymax()")
         attr.set_value(self.calib.max_y())
+
+    def read_dataset_size(self, attr):
+        self.debug_stream("In read_dataset_size()")
+        attr.set_value(self.calib.dataset_size())
 
     def read_calib_order(self, attr):
         self.debug_stream("In read_calib_order()")
@@ -175,8 +201,14 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.debug_stream("In write_Ydata()")
         data=attr.get_write_value()
 
+    def read_file_name(self, attr):
+        self.debug_stream("In read_file_name()")
+        attr.set_value(self.calib.get_calib_file_name())
 
-
+    def write_file_name(self, attr):
+        self.debug_stream("In write_file_name()")
+        data=attr.get_write_value()
+        self.calib.set_file_name(data)
 
 
     def read_attr_hardware(self, data):
@@ -230,14 +262,17 @@ class Xcalibuds(PyTango.Device_4Impl):
         return argout
 
 
-    def save_calibration(self, argin):
+    def save_calibration(self):
         """ Saves calibration.
 
-        :param argin: path + filename
-        :type: PyTango.DevString
+        :param argin: none
+        :type: PyTango.DevVoid
         :return: None
         :rtype: PyTango.DevVoid """
         self.debug_stream("In save_calibration()")
+
+        self.calib.save()
+
         argout = [0]
 
         return argout
@@ -260,7 +295,7 @@ class XcalibudsClass(PyTango.DeviceClass):
         'fit_order':
         [PyTango.DevShort, "order of the poly for TABLE calibration fitting",
          [2] ],
-        'fit_method':
+        'reconstruction_method':
         [PyTango.DevString, "data reconstruction method : INTERPOLATION or POLYFIT",
          ["POLYFIT"] ],
         }
@@ -277,7 +312,7 @@ class XcalibudsClass(PyTango.DeviceClass):
             [[PyTango.DevString, "path and filename of calibraiton to load"],
             [PyTango.DevVoid, "none"]],
         'save_calibration':
-            [[PyTango.DevString, "path and filename of calibraiton to save"],
+            [[PyTango.DevVoid, "none"],
             [PyTango.DevVoid, "none"]],
         }
 
@@ -289,7 +324,6 @@ class XcalibudsClass(PyTango.DeviceClass):
             PyTango.SCALAR,
             PyTango.READ],
             {
-                'label': 'X min',
                 'format': "%10.3f",
                 'unit': " ",
                 'description': "minimal valid X value of current calibration ",
@@ -321,6 +355,17 @@ class XcalibudsClass(PyTango.DeviceClass):
                 'format': "%10.3f",
                 'unit': " ",
                 'description': "maximal valid Y value of current calibration ",
+            } ],
+
+        'dataset_size':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ],
+            {
+                'format': "%d",
+                'unit': " ",
+                'min alarm': "0",
+                'description': "Number of data (~matching lines in .calib files)",
             } ],
 
         'calib_order':
@@ -388,6 +433,17 @@ class XcalibudsClass(PyTango.DeviceClass):
             {
                 'description': "Y raw data",
             } ],
+
+        'file_name':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE],
+            {
+                'format': "%s",
+                'unit': " ",
+                'description': "Name of the calibrationfile",
+            } ],
+
         }
 
 def main():
