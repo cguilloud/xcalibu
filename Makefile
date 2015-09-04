@@ -50,3 +50,8 @@ install:
 #        mv ${BLISSADM_PATH}/spec/macros/xxx.mac ${BLISSADM_PATH}/spec/macros/xxx.mac.bup
 #        cp spec/xxx.mac ${BLISSADM_PATH}/spec/macros/xxx.mac
 
+
+test:
+	@echo "-------------- xcalibu TEST ---------------"
+	python xcalibu.py
+

@@ -101,9 +101,9 @@ class Xcalibu:
 
 
     def set_calib_file_name(self, fn):
-    """
+        """
         Sets the name of the file to use to save calibration.
-    """
+        """
         print "calibv file name set : %s " % fn
         self._calib_file_name = fn
 
