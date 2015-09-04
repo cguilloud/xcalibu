@@ -673,8 +673,8 @@ def main(args):
         # new way to load calibrations.
         myCalib = Xcalibu(calib_file_name=_calib_file,
                           fit_order=9,
-                          fit_method="POLYFIT")
-        # fit_method="INTERPOLATION")
+                          #fit_method="POLYFIT")
+	                  fit_method="INTERPOLATION")
 
         # Some calib parameters:
         _xmin = myCalib.min_x()
