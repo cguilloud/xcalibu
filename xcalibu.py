@@ -37,7 +37,6 @@ import numpy
 import time
 import datetime
 import re
-import matplotlib.pyplot as plt
 
 import timedisplay
 
@@ -672,6 +671,7 @@ class Xcalibu:
 
 
 def demo(do_plot):
+    import matplotlib.pyplot as plt
 
     """
     Demonstrations
