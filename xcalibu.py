@@ -163,6 +163,8 @@ class Xcalibu:
     def get_fit_order(self):
         return self._fit_order
 
+    def get_calib_time(self):
+        return self._calib_time
 
     def set_calib_time(self, timestamp):
         """
@@ -222,7 +224,7 @@ class Xcalibu:
         self.Ymax = self.y_raw.max()
 
     def get_raw_y(self):
-            return self.y_raw
+        return self.y_raw
 
 
     """
@@ -807,8 +809,8 @@ def main(args):
         # new way to load calibrations.
         myCalib = Xcalibu(calib_file_name=_calib_file,
                           fit_order=9,
-                          reconstruction_method="POLYFIT")
-        # reconstruction_method="INTERPOLATION")
+                          #fit_method="POLYFIT")
+	                  fit_method="INTERPOLATION")
 
         # Some calib parameters:
         _xmin = myCalib.min_x()
