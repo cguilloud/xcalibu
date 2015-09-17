@@ -16,18 +16,19 @@
 #
 #
 # The class mainly provides the following method :
-#
 #   get_y(x) which returns the f(x) fitted value.
 #
-#  TABLE----> INTERPOLATION   |  POLYFIT
+
+# The returned value is calculated by various methodes depending on
+# the calibration type and parameters.
 #
-#  POLY ---> FIT_ORDER
+#  TABLE ----> INTERPOLATION   |  POLYFIT
+#  POLY  ----> Direct calculation
 #
-#
-# The fit orded can be set.
 # The reverse function "get_x(y)" is also available.
 # Take care : get_x(get_y(x)) can be different from x due to
 # approximation of fitting.
+#
 
 __author__ = "cyril.guilloud@esrf.fr"
 __date__ = "2012-2014"
