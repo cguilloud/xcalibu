@@ -499,7 +499,7 @@ class Xcalibu:
     def calc_interpolated_value(self, x):
         """
         Returns Y value interpolated from 2 points.
-        For now only linear interpolation.
+        For now : only linear interpolation.
         """
         try:
             # Search if there is a matching point.
@@ -557,6 +557,7 @@ class Xcalibu:
 
 
     def plot(self):
+        import matplotlib.pyplot as plt
         log.info("Plotting")
 
         if self.get_calib_type() == "POLY":
@@ -674,7 +675,6 @@ class Xcalibu:
 
 
 def demo(do_plot):
-    import matplotlib.pyplot as plt
 
     """
     Demonstrations
@@ -810,15 +810,15 @@ def main(args):
         # new way to load calibrations.
         myCalib = Xcalibu(calib_file_name=_calib_file,
                           fit_order=9,
-                          #fit_method="POLYFIT")
-	                  fit_method="INTERPOLATION")
+                          #reconstruction_method="POLYFIT")
+	                  reconstruction_method="INTERPOLATION")
 
         # Some calib parameters:
         _xmin = myCalib.min_x()
         _xmax = myCalib.max_x()
         _xrange = _xmax - _xmin
 
-        # Example : caluculation of middel point of calibration.
+        # Example : calculation of middle point (X range) of calibration.
         _xtest = (_xmin + _xmax) / 2
         _time0 = time.time()
         _ytest = myCalib.get_y(_xtest)
