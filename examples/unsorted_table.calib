@@ -1,0 +1,22 @@
+# TEST calibration
+# Type TABLE
+# Comments are starting with '#'
+# Spaces are mainly ignored.
+
+CALIB_NAME = ST
+CALIB_TYPE = TABLE
+CALIB_TIME = 1400081171.300155
+CALIB_DESC = "test simple  table"
+#CALIB_TITI = 14
+
+
+# WARNING :  unsorted Xs... 
+# what to do for interpolation ???
+# to sort before to calculate ?
+
+ST[1]=1
+ST[2]=2
+ST[5]=2
+ST[4]=1
+
+
