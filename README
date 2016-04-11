@@ -18,5 +18,5 @@ to debug:
 plot a file:
 ./xcalibu.py -p examples/xcalibu_calib_poly.calib
 
-Cyril Guilloud ESRF BLISS 2013 2014
+Cyril Guilloud ESRF BLISS 2013-2016
 
