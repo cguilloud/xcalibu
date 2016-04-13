@@ -691,7 +691,7 @@ def demo(do_plot):
 
     log.info("Xcalibu - TEST - Gap for %f keV : %f" % (5, myCalib2.get_y(5)))
 
-    myCalib3 = Xcalibu(calib_file_name="./examples/xcalibu_calib_table.calib",
+    myCalib3 = Xcalibu(calib_file_name="./examples/table.calib",
                        fit_order=2,
                        reconstruction_method="INTERPOLATION")
 
