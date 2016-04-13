@@ -2,7 +2,6 @@
 # Xcalibu installation.
 #
 
-
 # Installation directories :
 # /users/blissadm/python/bliss_modules/
 # /users/blissadm/local/userconf/xcalibu/
@@ -35,23 +34,13 @@ install:
 	mkdir -p ${BLISSADM_PATH}/server/src
 
         # startup script
-	touch ${BLISSADM_PATH}/server/src/xcalibu_server
-	mv ${BLISSADM_PATH}/server/src/xcalibu_server ${BLISSADM_PATH}/server/src/xcalibu_server.bup
-	cp tango/xcalibu_server ${BLISSADM_PATH}/server/src/xcalibu_server
+	cp --backup=simple --suffix=.bup tango/xcalibu_server ${BLISSADM_PATH}/server/src/xcalibu_server
 
         # tango DS
-	touch ${BLISSADM_PATH}/server/src/Xcalibuds.py
-	mv ${BLISSADM_PATH}/server/src/Xcalibuds.py ${BLISSADM_PATH}/server/src/Xcalibuds.py.bup
-	cp tango/Xcalibuds.py ${BLISSADM_PATH}/server/src/Xcalibuds.py
-
-
-#        ####  Spec macros
-#        touch ${BLISSADM_PATH}/spec/macros/xxx.mac
-#        mv ${BLISSADM_PATH}/spec/macros/xxx.mac ${BLISSADM_PATH}/spec/macros/xxx.mac.bup
-#        cp spec/xxx.mac ${BLISSADM_PATH}/spec/macros/xxx.mac
+	cp --backup=simple --suffix=.bup tango/Xcalibuds.py ${BLISSADM_PATH}/server/src/Xcalibuds.py
 
 
 test:
 	@echo "-------------- xcalibu TEST ---------------"
-	python xcalibu.py
+	python xcalibu.py demo
 
