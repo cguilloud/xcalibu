@@ -6,32 +6,28 @@
 #
 # Xcalibu is a class to deal with calibrations.
 #
-# The calibration is read from a file storing information as a table
-# or as a polynom.
+# The calibration is read from a file or a string storing information
+# as a table or as a polynom.
 #
 #   ex of field of a table : U32BC1G[5.00]=14.05
-#
-# If using table, the class performs the fit of the raw data and
-# furnishes a y=f(x) polynomial function.
-#
 #
 # The class mainly provides the following method :
 #   get_y(x) which returns the f(x) fitted value.
 #
-
-# The returned value is calculated by various methodes depending on
-# the calibration type and parameters.
+# If using TABLE, the class performs the fit of the raw data and
+# furnishes a y=f(x) polynomial function.
 #
-#  TABLE ----> INTERPOLATION   |  POLYFIT
-#  POLY  ----> Direct calculation
+# The returned value is calculated by various reconstruction methods
+# depending on the calibration type and parameters.
+#   TABLE ----> INTERPOLATION   |  POLYFIT
+#   POLY  ----> Direct calculation
 #
 # The reverse function "get_x(y)" is also available.
 # Take care : get_x(get_y(x)) can be different from x due to
 # approximation of fitting.
-#
 
 __author__ = "cyril.guilloud@esrf.fr"
-__date__ = "2012-2014"
+__date__ = "2012-2016"
 
 import sys
 import numpy
@@ -76,7 +72,6 @@ class Xcalibu:
 
         self._data_lines = 0
 
-
         """
         Parameters recording
         """
@@ -105,9 +100,9 @@ class Xcalibu:
 
     def set_calib_file_name(self, fn):
         """
-        Sets the name of the file to use to save calibration.
+        Sets the name of the file to use to load/save a calibration.
         """
-        print "calibv file name set : %s " % fn
+        log.debug("set_calib_file_name(%s)" % fn)
         self._calib_file_name = fn
 
     def get_calib_file_name(self):
@@ -123,55 +118,34 @@ class Xcalibu:
     def get_calib_string(self):
         return(self._calib_string)
 
+    """
+    INTRINSEC calibration parameters
+    """
     def set_calib_name(self, value):
         """
-        Calibration name is read from the calibration file (field : CALIB_NAME).
+        Calibration name is read from the calibration file or string (field : CALIB_NAME).
         """
         self._calib_name = value
 
     def get_calib_name(self):
         """
-        Calibration name is read from the calibration file (field : CALIB_NAME).
+        Calibration name is read from the calibration file or string (field : CALIB_NAME).
         """
         return self._calib_name
 
-
     def set_calib_type(self, value):
         """
-        Sets calibration type read from calibration file (field : CALIB_TYPE).
+        Sets calibration type read from calibration file or string (field : CALIB_TYPE).
         Can be TABLE or POLY.
         """
         self._calib_type = value
 
     def get_calib_type(self):
         """
-        Returns calibration type read from calibration file (field : CALIB_TYPE).
+        Returns calibration type read from calibration file or string (field : CALIB_TYPE).
         Can be 'TABLE' or 'POLY'.
         """
         return self._calib_type
-
-
-    def set_reconstruction_method(self, method):
-        """
-        Sets method for fitting : can be 'INTERPOLATION' or 'POLYFIT'
-        """
-        if method in ['INTERPOLATION', 'POLYFIT']:
-            self._rec_method = method
-        else:
-            raise XCalibError("unknown method : %s " % method)
-
-    def get_reconstruction_method(self):
-        return self._rec_method
-
-
-    def set_fit_order(self, order):
-        """
-        Sets the 'fit order' used to fit TABLE calibrations.
-        """
-        if isinstance(order, int) and order > 0:
-            self._fit_order = order
-        else:
-            log.error("set_fit_order : <fit_order> must be a positive integer.")
 
     def get_fit_order(self):
         return self._fit_order
@@ -184,10 +158,6 @@ class Xcalibu:
         Sets the time (in epoch format)
         """
         self._calib_time = timestamp
-
-    def get_calib_time(self):
-        return self._calib_time
-
 
     def set_calib_order(self, order):
         """
@@ -202,7 +172,6 @@ class Xcalibu:
     def get_calib_order(self):
         return self._calib_order
 
-
     def set_calib_description(self, value):
         """
         Sets calibration description string.
@@ -214,7 +183,6 @@ class Xcalibu:
         Returns calibration description string.
         """
         return self._description
-
 
     def set_raw_x(self, arr_x):
         """
@@ -229,7 +197,6 @@ class Xcalibu:
     def get_raw_x(self):
         return self.x_raw
 
-
     def set_raw_y(self, arr_y):
         """
         Sets y raw data numpy array.
@@ -241,6 +208,29 @@ class Xcalibu:
     def get_raw_y(self):
         return self.y_raw
 
+    """
+    calibration USAGE parameters.
+    """
+    def set_reconstruction_method(self, method):
+        """
+        Sets method for fitting : can be 'INTERPOLATION' or 'POLYFIT'
+        """
+        if method in ['INTERPOLATION', 'POLYFIT']:
+            self._rec_method = method
+        else:
+            raise XCalibError("unknown method : %s " % method)
+
+    def get_reconstruction_method(self):
+        return self._rec_method
+
+    def set_fit_order(self, order):
+        """
+        Sets the 'fit order' used to fit TABLE calibrations.
+        """
+        if isinstance(order, int) and order > 0:
+            self._fit_order = order
+        else:
+            log.error("set_fit_order : <fit_order> must be a positive integer.")
 
     """
     Calibration loading :
@@ -340,7 +330,8 @@ class Xcalibu:
                             # .       : any character except a newline
                             # (?: re) : Groups regular expressions without remembering matched text.
                             # \s      : Whitespace, equivalent to [\t\n\r\f].
-                            matchPoint = re.search(r'%s(?:\s*)\[(.+)\](?:\s*)=(?:\s*)(.+)' % self.get_calib_name(), line)
+                            matchPoint = re.search(r'%s(?:\s*)\[(.+)\](?:\s*)=(?:\s*)(.+)' %
+                                                   self.get_calib_name(), line)
 
                         if matchPoint:
                             # At least one ligne of the calib data has been read
@@ -403,7 +394,8 @@ class Xcalibu:
             # traceback.print_exc()
             print "-E-----------------------------------------------------"
         finally:
-            calib_file.close()
+            if _calib_file_name is not None:
+                calib_source.close()
 
         if self.get_calib_type() == "TABLE":
             self.nb_calib_points = _nb_points
@@ -421,10 +413,9 @@ class Xcalibu:
         log.debug("Raw X data : %s" % ", ".join(map(str, self.x_raw)))
         log.debug("Raw Y data : %s" % ", ".join(map(str, self.y_raw)))
 
-
         if self.get_calib_type() == "TABLE" and self.get_reconstruction_method() == "POLYFIT":
             # Fits data if needed.
-            #log.info("get_calib_type=\"%s\" get_reconstruction_method=\"%s\" " %
+            # log.info("get_calib_type=\"%s\" get_reconstruction_method=\"%s\" " %
             #         (self.get_calib_type(), self.get_reconstruction_method()))
             self.fit()
         elif self.get_calib_type() == "TABLE" and self.get_reconstruction_method() == "INTERPOLATION":
@@ -435,8 +426,6 @@ class Xcalibu:
             # Sets Y range.
             self.Ymin = self.get_y(self.Xmin)
             self.Ymax = self.get_y(self.Xmax)
-
-
 
     def fit(self):
         if self.get_calib_type() == "POLY":
@@ -537,7 +526,6 @@ class Xcalibu:
 
             return y
 
-
     def save(self):
         """
         Saves current calibration into file.
@@ -567,7 +555,7 @@ class Xcalibu:
             _yyy = self.get_raw_y()
 
             for ii in range(_xxx.size):
-                _sf.write( "%s[%f] = %f\n" % (_calib_name, _xxx[ii], _yyy[ii]))
+                _sf.write("%s[%f] = %f\n" % (_calib_name, _xxx[ii], _yyy[ii]))
 
         elif self.get_calib_type() == "POLY":
             _sf.write("CALIB_XMIN=%f\n" % self.min_x())
@@ -581,7 +569,6 @@ class Xcalibu:
             print "ERRRORORORO"
 
         _sf.close()
-
 
     def plot(self):
         import matplotlib.pyplot as plt
@@ -752,7 +739,6 @@ def demo(do_plot):
                             fit_order=5,
                             reconstruction_method="POLYFIT")
 
-
     print "saving poly demo....",
     myCalib1.set_calib_file_name("ppp.calib")
     myCalib1.save()
@@ -772,7 +758,7 @@ def demo(do_plot):
     myDynamicCalib.set_calib_time("1234.5678")
     myDynamicCalib.set_calib_description("dynamic calibration created for demo")
     myDynamicCalib.set_raw_x(numpy.linspace(1, 10, 10))
-    myDynamicCalib.set_raw_y(numpy.array([3,6,5,4,2, 5,7,3,7,4]))
+    myDynamicCalib.set_raw_y(numpy.array([3, 6, 5, 4, 2, 5, 7, 3, 7, 4]))
     myDynamicCalib.save()
     print "myDynamicCalib.get_y(2.3)=%f" % myDynamicCalib.get_y(2.3)
     print "--------------------------------------------------------"
@@ -790,10 +776,10 @@ def demo(do_plot):
 
 def main(args):
     """
-    Function main provided for demonstration and testing purposes.
+    main function is provided for demonstration and testing purposes.
     """
     print ""
-    print "--------------------{ Xcalibu }----------------------------------"
+    print "------------------------{ Xcalibu }----------------------------------"
 
     """
     arguments parsing
@@ -858,10 +844,9 @@ def main(args):
         log.info("y value of %g = %g (%s)" % (_xtest, _ytest, timedisplay.duration_format(_calc_duration)))
 
         _NB_POINTS = 25
-        # Example : calculation of _NB_POINTS points.
+        # bench example : calculation of _NB_POINTS points.
         _time0 = time.time()
-        from numpy import arange
-        for xx in arange(_xmin, _xmax, _xrange/_NB_POINTS):
+        for xx in numpy.arange(_xmin, _xmax, _xrange/_NB_POINTS):
             yy = myCalib.get_y(xx)
             # print " f(%06.3f)=%06.3f   "%(xx, yy),
         _Ncalc_duration = time.time() - _time0
