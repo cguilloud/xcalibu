@@ -230,7 +230,7 @@ class Xcalibuds(PyTango.Device_4Impl):
     def write_Xdata(self, attr):
         self.debug_stream("In write_Xdata()")
         data=attr.get_write_value()
-
+        self.calib.set_raw_x(data)
 
     def read_Ydata(self, attr):
         self.debug_stream("In read_Ydata()")
@@ -239,6 +239,7 @@ class Xcalibuds(PyTango.Device_4Impl):
     def write_Ydata(self, attr):
         self.debug_stream("In write_Ydata()")
         data=attr.get_write_value()
+        self.calib.set_raw_y(data)
 
     # CALIB *FILE* NAME
     def read_file_name(self, attr):
