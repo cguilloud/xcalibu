@@ -166,6 +166,10 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+    def write_calib_type(self, attr):
+        data=attr.get_write_value()
+        self.debug_stream("In write_calib_type(%s)"%data)
+        self.calib.set_calib_type(data)
 
     # CALIB NAME
     def read_calib_name(self, attr):
@@ -176,6 +180,24 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+    def write_calib_name(self, attr):
+        data=attr.get_write_value()
+        self.debug_stream("In write_calib_name(%s)"%data)
+        self.calib.set_calib_name(data)
+
+    # CALIB TIME
+    def read_calib_time(self, attr):
+        self.debug_stream("In read_calib_time()")
+        try:
+            attr.set_value(self.calib.get_calib_time())
+        except:
+            import traceback
+            traceback.print_exc()
+
+    def write_calib_time(self, attr):
+        data=attr.get_write_value()
+        self.debug_stream("In write_calib_time(%s)"%data)
+        self.calib.set_calib_time(data)
 
     # DESCRIPTION
     def read_calib_description(self, attr):
@@ -186,6 +208,10 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+    def write_calib_description(self, attr):
+        data=attr.get_write_value()
+        self.debug_stream("In write_calib_description(%s)"%data)
+        self.calib.set_calib_description(data)
 
     # FIT ORDER
     def read_fit_order(self, attr):
@@ -223,6 +249,21 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.debug_stream("In write_file_name()")
         data=attr.get_write_value()
         self.calib.set_file_name(data)
+    # RECONSTRUCTION METHOD
+    # not written in ".calib" file ???
+    def read_reconstruction_method(self, attr):
+        self.debug_stream("In read_reconstruction_method()")
+        attr.set_value(self.calib.get_calib_reconstruction_method())
+
+    def write_reconstruction_method(self, attr):
+        data=attr.get_write_value()
+        self.debug_stream("In write_reconstruction_method(%s)"%data)
+        try:
+            self.reconstruction_method = data
+        except:
+            import traceback
+            traceback.print_exc()
+
 
 
     def read_attr_hardware(self, data):
@@ -405,7 +446,7 @@ class XcalibudsClass(PyTango.DeviceClass):
         'calib_type':
             [[PyTango.DevString,
             PyTango.SCALAR,
-            PyTango.READ],
+            PyTango.READ_WRITE],
             {
                 'format': "%s",
                 'unit': " ",
@@ -415,21 +456,42 @@ class XcalibudsClass(PyTango.DeviceClass):
         'calib_name':
             [[PyTango.DevString,
             PyTango.SCALAR,
-            PyTango.READ],
+            PyTango.READ_WRITE],
             {
                 'format': "%s",
                 'unit': " ",
                 'description': "Name of the calibration read from calib file",
             } ],
 
+        'calib_time':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE],
+            {
+                'format': "%d",
+                'unit': " ",
+                'description': "Timestamp of the calibration in seconds from Epoch",
+            } ],
+
         'calib_description':
             [[PyTango.DevString,
             PyTango.SCALAR,
-            PyTango.READ],
+            PyTango.READ_WRITE],
             {
                 'format': "%s",
                 'unit': " ",
                 'description': "Description of the calibration read from calib file",
+            } ],
+
+        'reconstruction_method':
+            # not written in .calib file...
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE],
+            {
+                'format': "%s",
+                'unit': " ",
+                'description': "Reconstruction method : INTERPOLATION or POLYFIT ",
             } ],
 
          'Xdata':
