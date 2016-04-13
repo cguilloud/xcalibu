@@ -56,15 +56,18 @@ class XCalibError(Exception):
 
 
 class Xcalibu:
-    def __init__(self, calib_file_name=None, fit_order=None, reconstruction_method=None):
+    def __init__(self, calib_string=None, calib_file_name=None, fit_order=None, reconstruction_method=None):
+        self._calib_file_name = None
+        self._calib_string = None
+
         self._calib_name = None
+        self._fit_order = 0
+        self._rec_method = None
+
         self._calib_type = None
         self._description = None
         self._calib_order = 0
-        self._calib_file_name = None
         self._file_name = None
-        self._fit_order = 0
-        self._rec_method = None
 
         self.Xmin = 0.0
         self.Xmax = 0.0
@@ -81,6 +84,10 @@ class Xcalibu:
         if calib_file_name:
             self.set_calib_file_name(calib_file_name)
 
+        # Calib string.
+        if calib_string:
+            self.set_calib_string(calib_string)
+
         # Poly order to be used by reconstruction method for TABLE calibrations.
         if fit_order:
             self._fit_order = fit_order
@@ -91,14 +98,10 @@ class Xcalibu:
         if reconstruction_method is not None:
             self.set_reconstruction_method(reconstruction_method)
 
-
-        """
-        Initializations
-        """
-        if self.get_calib_file_name() is not None:
-            # A file name is defined, try to load the calib.
+        # Loads !
+        if self.get_calib_file_name() is not None or self.get_calib_string() is not None:
+            # A calib string or a file name is defined, try to load the calib.
             self.load_calib()
-
 
     def set_calib_file_name(self, fn):
         """
@@ -110,6 +113,15 @@ class Xcalibu:
     def get_calib_file_name(self):
         return(self._calib_file_name)
 
+    def set_calib_string(self, calib_string):
+        """
+        Sets the string to use to create a calibration.
+        """
+        # print "calib string : %s " % calib_string
+        self._calib_string = calib_string
+
+    def get_calib_string(self):
+        return(self._calib_string)
 
     def set_calib_name(self, value):
         """
@@ -250,16 +262,21 @@ class Xcalibu:
         _yvalues = []
 
         _calib_file_name = self.get_calib_file_name()
+        _calib_string = self.get_calib_string()
+
+        if _calib_file_name is not None:
+            try:
+                calib_source = open(_calib_file_name, mode='r')
+            except IOError:
+                raise XCalibError("Unable to open file '%s' \n" % _calib_file_name)
+            except:
+                raise XCalibError("error in calibration loading (file=%s)" % _calib_file_name)
+        elif _calib_string is not None:
+            print "loading calib from string:"
+            calib_source = _calib_string.split("\n")
 
         try:
-            calib_file = open(_calib_file_name, mode='r')
-        except IOError:
-            raise XCalibError("Unable to open file '%s' \n" % _calib_file_name)
-        except:
-            raise XCalibError("error in calibration loading (file=%s)" % _calib_file_name)
-
-        try:
-            for raw_line in calib_file:
+            for raw_line in calib_source:
                 _ligne_nb = _ligne_nb + 1
 
                 # Removes optional starting "whitespace" characters :
@@ -366,7 +383,7 @@ class Xcalibu:
 
                     else:
                         raise XCalibError("%s line %d : invalid calib type : %s\nraw line : {%s}" %
-                                          (calib_file.name, _ligne_nb, self.get_calib_type(), line))
+                                          (calib_source, _ligne_nb, self.get_calib_type(), line))
 
             # End of parsing of lines.
             if self.get_calib_type() == "POLY":
@@ -525,6 +542,14 @@ class Xcalibu:
         """
         Saves current calibration into file.
         """
+        _file_name = self.get_calib_file_name()
+
+        if _file_name is None:
+            print "impossible to save : no calib file defined"
+        else:
+            self._save_calib_file()
+
+    def _save_calib_file(self):
         _calib_name = self.get_calib_name()
         _file_name = self.get_calib_file_name()
 
@@ -678,14 +703,18 @@ class Xcalibu:
 
 def demo(do_plot):
 
-    """
-    Demonstrations
-    """
-    myCalib1 = Xcalibu(calib_file_name="./examples/xcalibu_calib_poly.calib")
+    # loads demo calibration from demo_calib_string string
+    # stored in this file with POLYFIT reconstruction method.
+    myCalibString = Xcalibu(calib_string=demo_calib_string,
+                            fit_order=2,
+                            reconstruction_method="POLYFIT")
 
-    log.info("Xcalibu - TEST - Gap for %f keV : %f" % (5, myCalib1.get_y(5)))
+    # Loads POLY calibration from file.
+    myCalibPoly = Xcalibu(calib_file_name="./examples/poly.calib")
+    log.info("Xcalibu - TEST - Gap for %f keV : %f" % (5, myCalibPoly.get_y(5)))
 
-    myCalib2 = Xcalibu(calib_file_name="./examples/xcalibu_calib_table_undu.calib",
+    # Loads undu TABLE calibration from file with POLYFIT reconstruction method.
+    myCalib2 = Xcalibu(calib_file_name="./examples/undu_table.calib",
                        fit_order=2,
                        reconstruction_method="POLYFIT")
 
@@ -804,14 +833,16 @@ def main(args):
     if len(args) == 0:
         parser.print_help()
     else:
-        _calib_file = args[0]
-        print "use \"%s\" argument as calib test file" % _calib_file
 
-        # new way to load calibrations.
-        myCalib = Xcalibu(calib_file_name=_calib_file,
-                          fit_order=9,
-                          #reconstruction_method="POLYFIT")
-	                  reconstruction_method="INTERPOLATION")
+        if args[0] == "demo":
+            demo(options.plot)
+
+        else:
+            print "use \"%s\" argument as calib test file" % args[0]
+            # loads calibration from file.
+            myCalib = Xcalibu(calib_file_name=args[0],
+                              fit_order=3,
+                              reconstruction_method="INTERPOLATION")
 
         # Some calib parameters:
         _xmin = myCalib.min_x()
@@ -842,6 +873,35 @@ def main(args):
 
         if options.plot:
             myCalib.plot()
+
+demo_calib_string = """
+# TEST calibration
+# Type TABLE
+# Comments are starting with '#'
+# Spaces are mainly ignored.
+
+CALIB_NAME = B52
+CALIB_TYPE = TABLE
+CALIB_TIME = 1400081171.300155
+CALIB_DESC = "test table : example of matching lines"
+#CALIB_TITI = 14
+
+B52[0.8e-2] = -0.83e-2
+B52[1]=1
+B52[3]= 2
+B52[5]=-12
+B52 [6]=  -3
+B52 [7]=   2
+B52[10]=   4.5
+ B52[13]=7.5
+   B52[15]=18.5
+B52[18]=0.5e2
+B52[23]=	42
+B52[23.1]=0.61e2
+B52[27.401] = 0.72e2
+B52[32]=  62
+B52[0.5e2] = +0.53e2
+"""
 
 if __name__ == "__main__":
     main(sys.argv)
