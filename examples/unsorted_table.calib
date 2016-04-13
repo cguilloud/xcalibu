@@ -13,6 +13,7 @@ CALIB_DESC = "test simple  table"
 # WARNING :  unsorted Xs... 
 # what to do for interpolation ???
 # to sort before to calculate ?
+# ...-> not allowed.
 
 ST[1]=1
 ST[2]=2
