@@ -359,10 +359,10 @@ class XcalibudsClass(PyTango.DeviceClass):
          ["/users/blissadm/local/userconf/xcalibu/tutu.calib"] ],
         'fit_order':
         [PyTango.DevShort, "order of the poly for TABLE calibration fitting",
-         [2] ],
+          ],
         'reconstruction_method':
         [PyTango.DevString, "data reconstruction method : INTERPOLATION or POLYFIT",
-         ["POLYFIT"] ],
+         ["INTERPOLATION"] ],
         }
 
     #    Command definitions
