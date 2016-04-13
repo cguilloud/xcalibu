@@ -91,20 +91,24 @@ class Xcalibuds(PyTango.Device_4Impl):
         except:
             print "no \"reconstruction_method\" Tango propery found"
 
-        self.info_stream("file to load = %s" % self.calib_file_name)
-        self.info_stream("fit_order = %d" % self.fit_order)
-        self.info_stream("reconstruction_method = %s" % self.reconstruction_method)
 
-        # Loads a calibration.
-        self.calib = xcalibu.Xcalibu( self.calib_file_name,
-                                      self.fit_order,
-                                      self.reconstruction_method )
+        try:
+            # Loads a calibration.
+            self.calib = xcalibu.Xcalibu( self.calib_file_name,
+                                          self.fit_order,
+                                          self.reconstruction_method )
 
-        if self.calib.get_calib_type() == "TABLE":
-            self.info_stream("fits TABLE calib.")
-            # self.calib.fit()
+            if self.calib.get_calib_type() == "TABLE":
+                self.info_stream("fits TABLE calib.")
+                # self.calib.fit()
 
-        print "Device " + bcolors.PINK + self._ds_name + bcolors.ENDC + " initialized."
+            print "Device " + bcolors.PINK + self._ds_name + bcolors.ENDC + " initialized."
+
+        except:
+            self.calib = xcalibu.Xcalibu()
+
+            print "Device " + bcolors.PINK + self._ds_name + bcolors.ENDC + " use empty Calib"
+
 
     def always_executed_hook(self):
         self.debug_stream("In always_excuted_hook()")
@@ -247,9 +251,14 @@ class Xcalibuds(PyTango.Device_4Impl):
         attr.set_value(self.calib.get_calib_file_name())
 
     def write_file_name(self, attr):
-        self.debug_stream("In write_file_name()")
         data=attr.get_write_value()
-        self.calib.set_file_name(data)
+        self.debug_stream("In write_file_name(%s)"%data)
+        try:
+            self.calib.set_calib_file_name(data)
+        except:
+            import traceback
+            traceback.print_exc()
+
     # RECONSTRUCTION METHOD
     # not written in ".calib" file ???
     def read_reconstruction_method(self, attr):
@@ -427,7 +436,7 @@ class XcalibudsClass(PyTango.DeviceClass):
         'calib_order':
             [[PyTango.DevShort,
             PyTango.SCALAR,
-            PyTango.READ],
+            PyTango.READ_WRITE],
             {
                 'format': "%d",
                 'unit': " ",
@@ -437,7 +446,7 @@ class XcalibudsClass(PyTango.DeviceClass):
         'fit_order':
             [[PyTango.DevShort,
             PyTango.SCALAR,
-            PyTango.READ],
+            PyTango.READ_WRITE],
             {
                 'format': "%d",
                 'unit': " ",
