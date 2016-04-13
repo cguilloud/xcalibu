@@ -74,15 +74,20 @@ class Xcalibuds(PyTango.Device_4Impl):
         # calibu logging
         logging.basicConfig(format=LOG_FORMAT, level=self.log_level)
 
-        # Gets calibration file name from device properties
+
+        # Device Properties
         self.calib_file_name  = self.device_property_list['file'][2]
+        self.info_stream("file to load = %s" % self.calib_file_name)
+
         try:
             self.fit_order = int(self.device_property_list['fit_order'][2])
+            self.info_stream("fit_order = %d" % self.fit_order)
         except:
             print "no \"fit_order\" tango property found"
 
         try:
             self.reconstruction_method = self.device_property_list['reconstruction_method'][2][0]
+            self.info_stream("reconstruction_method = %s" % self.reconstruction_method)
         except:
             print "no \"reconstruction_method\" Tango propery found"
 
@@ -152,6 +157,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+    # CALIB TYPE
     def read_calib_type(self, attr):
         self.debug_stream("In read_calib_type()")
         try:
@@ -160,6 +166,8 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+
+    # CALIB NAME
     def read_calib_name(self, attr):
         self.debug_stream("In read_calib_name()")
         try:
@@ -168,6 +176,8 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+
+    # DESCRIPTION
     def read_calib_description(self, attr):
         self.debug_stream("In read_calib_description()")
         try:
@@ -176,6 +186,8 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+
+    # FIT ORDER
     def read_fit_order(self, attr):
         self.debug_stream("In read_fit_order()")
         try:
@@ -184,6 +196,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             import traceback
             traceback.print_exc()
 
+    # DATA
     def read_Xdata(self, attr):
         self.debug_stream("In read_Xdata()")
         attr.set_value(self.calib.get_raw_x())
@@ -201,6 +214,7 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.debug_stream("In write_Ydata()")
         data=attr.get_write_value()
 
+    # CALIB *FILE* NAME
     def read_file_name(self, attr):
         self.debug_stream("In read_file_name()")
         attr.set_value(self.calib.get_calib_file_name())
