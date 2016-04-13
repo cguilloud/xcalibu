@@ -802,8 +802,7 @@ def main(args):
     logging.basicConfig(format=LOG_FORMAT, level=loglevel)
 
     if len(args) == 0:
-        print "no arg file -> launch default demo"
-        demo(options.plot)
+        parser.print_help()
     else:
         _calib_file = args[0]
         print "use \"%s\" argument as calib test file" % _calib_file
