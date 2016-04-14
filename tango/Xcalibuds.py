@@ -24,7 +24,6 @@ class Xcalibuds(PyTango.Device_4Impl):
         PyTango.Device_4Impl.__init__(self,cl,name)
 
         self.debug_stream("In __init__()")
-        self._ds_name = name
 
         self.init_device()
 
@@ -36,6 +35,7 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.get_device_properties(self.get_device_class())
 
         self.attr_Xdata_read = [0.0]
+
 
         # From here we can get properties.
 
@@ -94,20 +94,20 @@ class Xcalibuds(PyTango.Device_4Impl):
 
         try:
             # Loads a calibration.
-            self.calib = xcalibu.Xcalibu( self.calib_file_name,
-                                          self.fit_order,
-                                          self.reconstruction_method )
+            self.calib = xcalibu.Xcalibu( calib_file_name=self.calib_file_name,
+                                          fit_order=self.fit_order,
+                                          reconstruction_method=self.reconstruction_method )
 
             if self.calib.get_calib_type() == "TABLE":
                 self.info_stream("fits TABLE calib.")
                 # self.calib.fit()
 
-            print "Device " + bcolors.PINK + self._ds_name + bcolors.ENDC + " initialized."
+            print "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " initialized."
 
         except:
             self.calib = xcalibu.Xcalibu()
 
-            print "Device " + bcolors.PINK + self._ds_name + bcolors.ENDC + " use empty Calib"
+            print "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " use empty Calib"
 
 
     def always_executed_hook(self):
@@ -190,8 +190,8 @@ class Xcalibuds(PyTango.Device_4Impl):
         self.calib.set_calib_name(data)
 
     # CALIB TIME
+    @PyTango.DebugIt()
     def read_calib_time(self, attr):
-        self.debug_stream("In read_calib_time()")
         try:
             attr.set_value(self.calib.get_calib_time())
         except:
@@ -263,7 +263,7 @@ class Xcalibuds(PyTango.Device_4Impl):
     # not written in ".calib" file ???
     def read_reconstruction_method(self, attr):
         self.debug_stream("In read_reconstruction_method()")
-        attr.set_value(self.calib.get_calib_reconstruction_method())
+        attr.set_value(self.calib.get_reconstruction_method())
 
     def write_reconstruction_method(self, attr):
         data=attr.get_write_value()
@@ -533,13 +533,13 @@ class XcalibudsClass(PyTango.DeviceClass):
         }
 
 def main():
-
+    # sys.argv  = ['Xcalibuds.py', 't26']
     try:
         py = PyTango.Util(sys.argv)
         py.add_class(XcalibudsClass, Xcalibuds, 'Xcalibuds')
 
-
         U = PyTango.Util.instance()
+
         U.server_init()
         U.server_run()
 
@@ -551,3 +551,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+

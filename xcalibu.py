@@ -25,6 +25,23 @@
 # The reverse function "get_x(y)" is also available.
 # Take care : get_x(get_y(x)) can be different from x due to
 # approximation of fitting.
+#
+# Intrinsec parameters of a calibration (parameters fixed at calib
+# recording/generation):
+# *CALIB_NAME
+# *CALIB_TYPE
+# *CALIB_TIME
+# *CALIB_DESC
+#
+# and 3 more for a polynom:
+# *CALIB_XMIN
+# *CALIB_XMAX
+# *CALIB_ORDER
+#
+# Usage parameters (parameters that a user can change to use its
+# calibration):
+# *RECONSTRUCTION_METHOD : POLYFIT or INTERPOLATION
+# *FIT_ORDER (for a TABLE calib and POLYFIT reconstruction_method)
 
 __author__ = "cyril.guilloud@esrf.fr"
 __date__ = "2012-2016"
@@ -155,7 +172,7 @@ class Xcalibu:
 
     def set_calib_time(self, timestamp):
         """
-        Sets the time (in epoch format)
+        Sets the time (seconds since epoch)
         """
         self._calib_time = timestamp
 
