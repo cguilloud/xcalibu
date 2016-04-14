@@ -316,7 +316,7 @@ class Xcalibu:
                     elif _info == "TYPE":
                         self.set_calib_type(_value)
                     elif _info == "TIME":
-                        self.set_calib_time(_value)
+                        self.set_calib_time(long(_value.split(".")[0]))
                     elif _info == "ORDER":
                         self.set_calib_order(int(_value))
                         self.coeffs = numpy.linspace(0, 0, self.get_calib_order() + 1)
