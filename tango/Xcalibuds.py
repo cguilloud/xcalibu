@@ -253,8 +253,10 @@ class Xcalibuds(PyTango.Device_4Impl):
     def write_file_name(self, attr):
         data=attr.get_write_value()
         self.debug_stream("In write_file_name(%s)"%data)
+        self.db.put_device_property(self.get_name(),{'file': [data]})
         try:
             self.calib.set_calib_file_name(data)
+
         except:
             import traceback
             traceback.print_exc()
