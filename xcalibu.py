@@ -850,6 +850,11 @@ def main(args):
 
     if len(args) == 0:
         parser.print_help()
+        print ""
+        print "Argument:"
+        print "  demo                  Launches some examples of calibrations"
+        print "  <calib_file>          Launches demo using <calib_file> calibration file"
+        print ""
     else:
 
         if args[0] == "demo":
@@ -862,34 +867,34 @@ def main(args):
                               fit_order=3,
                               reconstruction_method="INTERPOLATION")
 
-        # Some calib parameters:
-        _xmin = myCalib.min_x()
-        _xmax = myCalib.max_x()
-        _xrange = _xmax - _xmin
+            # Some calib parameters:
+            _xmin = myCalib.min_x()
+            _xmax = myCalib.max_x()
+            _xrange = _xmax - _xmin
 
-        # Example : calculation of middle point (X range) of calibration.
-        _xtest = (_xmin + _xmax) / 2
-        _time0 = time.time()
-        _ytest = myCalib.get_y(_xtest)
-        _calc_duration = time.time() - _time0
+            # Example : calculation of middle point (X range) of calibration.
+            _xtest = (_xmin + _xmax) / 2
+            _time0 = time.time()
+            _ytest = myCalib.get_y(_xtest)
+            _calc_duration = time.time() - _time0
 
-        log.info("y value of %g = %g (%s)" % (_xtest, _ytest, timedisplay.duration_format(_calc_duration)))
+            log.info("y value of %g = %g (%s)" % (_xtest, _ytest, timedisplay.duration_format(_calc_duration)))
 
-        _NB_POINTS = 25
-        # bench example : calculation of _NB_POINTS points.
-        _time0 = time.time()
-        for xx in numpy.arange(_xmin, _xmax, _xrange/_NB_POINTS):
-            yy = myCalib.get_y(xx)
-            # print " f(%06.3f)=%06.3f   "%(xx, yy),
-        _Ncalc_duration = time.time() - _time0
+            _NB_POINTS = 25
+            # bench example : calculation of _NB_POINTS points.
+            _time0 = time.time()
+            for xx in numpy.arange(_xmin, _xmax, _xrange/_NB_POINTS):
+                yy = myCalib.get_y(xx)
+                # print " f(%06.3f)=%06.3f   "%(xx, yy),
+            _Ncalc_duration = time.time() - _time0
 
-        log.info("Calculation of %d values of y. duration : %s" %
-                 (_NB_POINTS, timedisplay.duration_format(_Ncalc_duration)))
+            log.info("Calculation of %d values of y. duration : %s" %
+                     (_NB_POINTS, timedisplay.duration_format(_Ncalc_duration)))
 
-        sys.stdout.flush()
+            sys.stdout.flush()
 
-        if options.plot:
-            myCalib.plot()
+            if options.plot:
+                myCalib.plot()
 
 demo_calib_string = """
 # TEST calibration
