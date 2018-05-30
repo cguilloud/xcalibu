@@ -756,17 +756,32 @@ def demo(do_plot):
                             fit_order=5,
                             reconstruction_method="POLYFIT")
 
-    print "saving poly demo....",
-    myCalib1.set_calib_file_name("ppp.calib")
-    myCalib1.save()
-    print "OK"
+    print "------------------------------------------------------------------------------"
+    print "Creating calib from inline data....",
+    # calibration from raw data
+    myRawCalib = Xcalibu()
+    a = numpy.array([1,2,3,4,5])
+    b = numpy.array([1,3,1,3,1])
+    myRawCalib.set_raw_x(a)
+    myRawCalib.set_raw_y(b)
+    #        myRawCalib.set_fit_order(1)  # 1 by default.
+    myRawCalib.set_calib_type("TABLE")
+    myRawCalib.set_reconstruction_method("INTERPOLATION")
+    print myRawCalib.get_y(1.5)  # should print 2.0
+    print "------------------------------------------------------------------------------"
+
+#     print "saving poly demo....",
+#     myCalib1.set_calib_file_name("ppp.calib")
+#     myCalib1.save()
+#     print "OK"
+#     print "------------------------------------------------------------------------------"
 
     print "saving table demo....",
     myCalibRingRy.set_calib_file_name("ttt.calib")
     myCalibRingRy.save()
     print "OK"
+    print "------------------------------------------------------------------------------"
 
-    print "--------------------------------------------------------"
     print "Example : creation of an empty calib then populate it."
     myDynamicCalib = Xcalibu()
     myDynamicCalib.set_calib_file_name("ddd.calib")
@@ -778,7 +793,7 @@ def demo(do_plot):
     myDynamicCalib.set_raw_y(numpy.array([3, 6, 5, 4, 2, 5, 7, 3, 7, 4]))
     myDynamicCalib.save()
     print "myDynamicCalib.get_y(2.3)=%f" % myDynamicCalib.get_y(2.3)
-    print "--------------------------------------------------------"
+    print "------------------------------------------------------------------------------"
 
     if do_plot:
         # myCalib1.plot()
