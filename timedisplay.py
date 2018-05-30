@@ -1,17 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-
 # timedisplay.py
 #
-# Collection of functions to display times in a human readable manner.
-#
+# Functions to display time durations in a human readable manner.
+
+
+# also to check :
+"""
+ from datetime import timedelta
+ str(timedelta(seconds=1234.894324432421))
+ '0:20:34.894324'
+"""
+
+# NB : ISO 8601 duration : https://en.wikipedia.org/wiki/ISO_8601#Durations
+#                          https://fr.wikipedia.org/wiki/ISO_8601#Dur.C3.A9e
 
 
 import sys
 
 __author__ = "cyril.guilloud@esrf.fr"
-__date__ = "2014"
+__date__ = "2014-2017"
 __version__ = "0.1"
 
 
