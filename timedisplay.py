@@ -5,7 +5,6 @@
 #
 # Functions to display time durations in a human readable manner.
 
-
 # also to check :
 """
  from datetime import timedelta
@@ -20,7 +19,7 @@
 import sys
 
 __author__ = "cyril.guilloud@esrf.fr"
-__date__ = "2014-2017"
+__date__ = "2014-2018"
 __version__ = "0.1"
 
 
@@ -69,33 +68,39 @@ def duration_format(duration):
 
     _duration_str = ""
 
+    # micro seconds
     if nb_us != 0:
             _duration_str = "%d𝜇s" % nb_us + _duration_str
 
+    # mili seconds
     if nb_ms > 0:
         if len(_duration_str) > 1:
             _duration_str = "%dms " % nb_ms + _duration_str
         else:
             _duration_str = "%dms" % nb_ms + _duration_str
 
+    # seconds
     if nb_seconds > 0:
         if len(_duration_str) > 1:
             _duration_str = "%ds " % nb_seconds + _duration_str
         else:
             _duration_str = "%ds" % nb_seconds + _duration_str
 
+    # minutes
     if nb_minutes > 0:
         if len(_duration_str) > 1:
             _duration_str = "%dmn " % nb_minutes + _duration_str
         else:
             _duration_str = "%dmn" % nb_minutes + _duration_str
 
+    # hours
     if nb_hours > 0:
         if len(_duration_str) > 1:
             _duration_str = "%dh " % nb_hours + _duration_str
         else:
             _duration_str = "%dh" % nb_hours + _duration_str
 
+    # day(s)
     if nb_days > 1:
         if len(_duration_str) > 1:
             _duration_str = "%ddays " % nb_days + _duration_str
@@ -107,6 +112,8 @@ def duration_format(duration):
         else:
             _duration_str = "%dday" % nb_days + _duration_str
 
+    # no years...
+
     return _duration_str
 
 
@@ -116,7 +123,7 @@ def test_display(duration):
 
 def main(args):
     """
-    Function main provided for demonstration and testing purposes.
+    main function provided for demonstration and testing purpose.
     """
     print ""
     print "--------------------{ timedisplay }----------------------------------"
@@ -127,8 +134,8 @@ def main(args):
     test_display(123.456789)
     test_display(123456)
     test_display(1234567)
-
-#       0.000123 -> "123𝜇s"
+    print ""
+#        0.000123 -> "123𝜇s"
 #        0.123000 -> "123ms"
 #      123.000000 -> "2mn 3s"
 #      123.456789 -> "2mn 3s 456ms 789𝜇s"

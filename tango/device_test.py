@@ -33,6 +33,4 @@ try:
 except:
     print " 666 is out of range"
 
-
 # must return : -0.444837391376
-

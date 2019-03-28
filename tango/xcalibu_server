@@ -10,4 +10,3 @@ if len(sys.argv) == 1:
     sys.argv.append("-?")
 
 execfile("/users/blissadm/server/src/Xcalibuds.py")
-
