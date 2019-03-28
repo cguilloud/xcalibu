@@ -57,7 +57,11 @@ import re
 import sys
 import time
 
-import timedisplay
+try:
+    import timedisplay
+    TIME_DISPLAY_FOUND = True
+except:
+    TIME_DISPLAY_FOUND = False
 
 log = logging.getLogger("XCALIBU")
 LOG_FORMAT = '%(name)s - %(levelname)s - %(message)s'
@@ -481,7 +485,11 @@ class Xcalibu:
 
         # Fit duration display.
         _fit_duration = time.time() - _time0
-        log.info("Fitting tooks %s" % timedisplay.duration_format(_fit_duration))
+
+        if TIME_DISPLAY_FOUND:
+            log.info("Fitting tooks %s" % timedisplay.duration_format(_fit_duration))
+        else:
+            log.info("Fitting tooks %s" % _fit_duration)
 
     def calc_poly_value(self, x):
         """
@@ -873,7 +881,10 @@ def main(args):
             _ytest = myCalib.get_y(_xtest)
             _calc_duration = time.time() - _time0
 
-            log.info("y value of %g = %g (%s)" % (_xtest, _ytest, timedisplay.duration_format(_calc_duration)))
+            if TIME_DISPLAY_FOUND:
+                _calc_duration = timedisplay.duration_format(_calc_duration))
+
+            log.info("y value of %g = %g (%s)" % (_xtest, _ytest, _calc_duration)
 
             _NB_POINTS = 25
             # bench example : calculation of _NB_POINTS points.
@@ -883,8 +894,11 @@ def main(args):
                 # print " f(%06.3f)=%06.3f   "%(xx, yy),
             _Ncalc_duration = time.time() - _time0
 
-            log.info("Calculation of %d values of y. duration : %s" %
-                     (_NB_POINTS, timedisplay.duration_format(_Ncalc_duration)))
+            if TIME_DISPLAY_FOUND:
+                _Ncalc_duration = timedisplay.duration_format(_Ncalc_duration))
+
+            log.info("Calculation of %d values of y. duration : %s" % (
+                _NB_POINTS, _Ncalc_duration )
 
             sys.stdout.flush()
 
