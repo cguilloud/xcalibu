@@ -83,13 +83,13 @@ class Xcalibuds(PyTango.Device_4Impl):
             self.fit_order = int(self.device_property_list['fit_order'][2])
             self.info_stream("fit_order = %d" % self.fit_order)
         except:
-            print "no \"fit_order\" tango property found"
+            print( "no \"fit_order\" tango property found")
 
         try:
             self.reconstruction_method = self.device_property_list['reconstruction_method'][2][0]
             self.info_stream("reconstruction_method = %s" % self.reconstruction_method)
         except:
-            print "no \"reconstruction_method\" Tango propery found"
+            print("no \"reconstruction_method\" Tango propery found")
 
         try:
             # Loads a calibration.
@@ -101,12 +101,12 @@ class Xcalibuds(PyTango.Device_4Impl):
                 self.info_stream("fits TABLE calib.")
                 # self.calib.fit()
 
-            print "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " initialized."
+            print( "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " initialized.")
 
         except:
             self.calib = xcalibu.Xcalibu()
 
-            print "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " use empty Calib"
+            print( "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " use empty Calib")
 
     def always_executed_hook(self):
         self.debug_stream("In always_excuted_hook()")
@@ -534,10 +534,10 @@ def main():
         U.server_init()
         U.server_run()
 
-    except PyTango.DevFailed, e:
-        print '-------> Received a DevFailed exception:', e
-    except Exception, e:
-        print '-------> An unforeseen exception occured....', e
+    except PyTango.DevFailed as e:
+        print('-------> Received a DevFailed exception:', e)
+    except Exception as e:
+        print( '-------> An unforeseen exception occured....', e)
 
 if __name__ == '__main__':
     main()

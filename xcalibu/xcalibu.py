@@ -927,7 +927,7 @@ def demo(do_plot):
         # myCalibRingRy.plot()
 
 
-def main(args):
+def main():
     """
     main function is provided for demonstration and testing purposes.
     """
@@ -1074,4 +1074,4 @@ B52[0.5e2] = +0.53e2
 """
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
