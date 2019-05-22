@@ -6,19 +6,20 @@ import traceback
 import sys
 
 import logging
+
 log = logging.getLogger("Xcalibuds ")
-LOG_FORMAT = '%(name)s - %(levelname)s - %(message)s'
+LOG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
 
 import xcalibu
 
 
 class bcolors:
-    PINK = '\033[95m'
-    BLUE = '\033[94m'
-    YELLOW = '\033[93m'
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    ENDC = '\033[0m'
+    PINK = "\033[95m"
+    BLUE = "\033[94m"
+    YELLOW = "\033[93m"
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"
 
 
 class Xcalibuds(PyTango.Device_4Impl):
@@ -55,7 +56,9 @@ class Xcalibuds(PyTango.Device_4Impl):
         # log level linked to DS log level.
         self.db = PyTango.Database()
         try:
-            self.log_level = int(self.db.get_class_property("Xcalibuds", "log_level")['log_level'][0])
+            self.log_level = int(
+                self.db.get_class_property("Xcalibuds", "log_level")["log_level"][0]
+            )
         except:
             logger = self.get_logger()
             level_number = logger.get_level()
@@ -76,37 +79,53 @@ class Xcalibuds(PyTango.Device_4Impl):
         logging.basicConfig(format=LOG_FORMAT, level=self.log_level)
 
         # Device Properties
-        self.calib_file_name = self.device_property_list['file'][2]
+        self.calib_file_name = self.device_property_list["file"][2]
         self.info_stream("file to load = %s" % self.calib_file_name)
 
         try:
-            self.fit_order = int(self.device_property_list['fit_order'][2])
+            self.fit_order = int(self.device_property_list["fit_order"][2])
             self.info_stream("fit_order = %d" % self.fit_order)
         except:
-            print( "no \"fit_order\" tango property found")
+            print('no "fit_order" tango property found')
 
         try:
-            self.reconstruction_method = self.device_property_list['reconstruction_method'][2][0]
+            self.reconstruction_method = self.device_property_list[
+                "reconstruction_method"
+            ][2][0]
             self.info_stream("reconstruction_method = %s" % self.reconstruction_method)
         except:
-            print("no \"reconstruction_method\" Tango propery found")
+            print('no "reconstruction_method" Tango propery found')
 
         try:
             # Loads a calibration.
-            self.calib = xcalibu.Xcalibu(calib_file_name=self.calib_file_name,
-                                         fit_order=self.fit_order,
-                                         reconstruction_method=self.reconstruction_method)
+            self.calib = xcalibu.Xcalibu(
+                calib_file_name=self.calib_file_name,
+                fit_order=self.fit_order,
+                reconstruction_method=self.reconstruction_method,
+            )
 
             if self.calib.get_calib_type() == "TABLE":
                 self.info_stream("fits TABLE calib.")
                 # self.calib.fit()
 
-            print( "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " initialized.")
+            print(
+                "Device "
+                + bcolors.PINK
+                + self.get_name()
+                + bcolors.ENDC
+                + " initialized."
+            )
 
         except:
             self.calib = xcalibu.Xcalibu()
 
-            print( "Device " + bcolors.PINK + self.get_name() + bcolors.ENDC + " use empty Calib")
+            print(
+                "Device "
+                + bcolors.PINK
+                + self.get_name()
+                + bcolors.ENDC
+                + " use empty Calib"
+            )
 
     def always_executed_hook(self):
         self.debug_stream("In always_excuted_hook()")
@@ -154,6 +173,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             attr.set_value(self.calib.get_calib_order())
         except:
             import traceback
+
             traceback.print_exc()
 
     # CALIB TYPE
@@ -163,6 +183,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             attr.set_value(self.calib.get_calib_type())
         except:
             import traceback
+
             traceback.print_exc()
 
     def write_calib_type(self, attr):
@@ -177,6 +198,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             attr.set_value(self.calib.get_calib_name())
         except:
             import traceback
+
             traceback.print_exc()
 
     def write_calib_name(self, attr):
@@ -191,6 +213,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             attr.set_value(self.calib.get_calib_time())
         except:
             import traceback
+
             traceback.print_exc()
 
     def write_calib_time(self, attr):
@@ -205,6 +228,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             attr.set_value(self.calib.get_calib_description())
         except:
             import traceback
+
             traceback.print_exc()
 
     def write_calib_description(self, attr):
@@ -219,6 +243,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             attr.set_value(self.calib.get_fit_order())
         except:
             import traceback
+
             traceback.print_exc()
 
     # DATA
@@ -248,12 +273,13 @@ class Xcalibuds(PyTango.Device_4Impl):
     def write_file_name(self, attr):
         data = attr.get_write_value()
         self.debug_stream("In write_file_name(%s)" % data)
-        self.db.put_device_property(self.get_name(), {'file': [data]})
+        self.db.put_device_property(self.get_name(), {"file": [data]})
         try:
             self.calib.set_calib_file_name(data)
 
         except:
             import traceback
+
             traceback.print_exc()
 
     # RECONSTRUCTION METHOD
@@ -269,6 +295,7 @@ class Xcalibuds(PyTango.Device_4Impl):
             self.reconstruction_method = data
         except:
             import traceback
+
             traceback.print_exc()
 
     def read_attr_hardware(self, data):
@@ -338,196 +365,163 @@ class Xcalibuds(PyTango.Device_4Impl):
 class XcalibudsClass(PyTango.DeviceClass):
     #    Class Properties
     class_property_list = {
-        'log_level':
-        [PyTango.DevShort, "log level for Xcalibu lib (in {10; 20; 30; 40; 50})",
-         [50]],
-        }
+        "log_level": [
+            PyTango.DevShort,
+            "log level for Xcalibu lib (in {10; 20; 30; 40; 50})",
+            [50],
+        ]
+    }
 
     #    Device Properties
     device_property_list = {
-        'file':
-        [PyTango.DevString, "path+ filename of the calibration file",
-         ["/users/blissadm/local/userconf/xcalibu/tutu.calib"]],
-        'fit_order':
-        [PyTango.DevShort, "order of the poly for TABLE calibration fitting",
-         ],
-        'reconstruction_method':
-        [PyTango.DevString, "data reconstruction method : INTERPOLATION or POLYFIT",
-         ["INTERPOLATION"]],
-        }
+        "file": [
+            PyTango.DevString,
+            "path+ filename of the calibration file",
+            ["/users/blissadm/local/userconf/xcalibu/tutu.calib"],
+        ],
+        "fit_order": [
+            PyTango.DevShort,
+            "order of the poly for TABLE calibration fitting",
+        ],
+        "reconstruction_method": [
+            PyTango.DevString,
+            "data reconstruction method : INTERPOLATION or POLYFIT",
+            ["INTERPOLATION"],
+        ],
+    }
 
     #    Command definitions
     cmd_list = {
-        'get_y':
-            [[PyTango.DevFloat, "x value"],
-             [PyTango.DevFloat, "y value"]],
-        'get_x':
-            [[PyTango.DevFloat, "none"],
-            [PyTango.DevFloat, "none"]],
-        'load_calibration':
-            [[PyTango.DevString, "path and filename of calibraiton to load"],
-            [PyTango.DevVoid, "none"]],
-        'save_calibration':
-            [[PyTango.DevVoid, "none"],
-            [PyTango.DevVoid, "none"]],
-        }
+        "get_y": [[PyTango.DevFloat, "x value"], [PyTango.DevFloat, "y value"]],
+        "get_x": [[PyTango.DevFloat, "none"], [PyTango.DevFloat, "none"]],
+        "load_calibration": [
+            [PyTango.DevString, "path and filename of calibraiton to load"],
+            [PyTango.DevVoid, "none"],
+        ],
+        "save_calibration": [[PyTango.DevVoid, "none"], [PyTango.DevVoid, "none"]],
+    }
 
     #    Attribute definitions
     attr_list = {
-        'Xmin':
-            [[PyTango.DevFloat,
-            PyTango.SCALAR,
-            PyTango.READ],
+        "Xmin": [
+            [PyTango.DevFloat, PyTango.SCALAR, PyTango.READ],
             {
-                'format': "%10.3f",
-                'unit': " ",
-                'description': "minimal valid X value of current calibration ",
-            }],
-        'Xmax':
-            [[PyTango.DevFloat,
-            PyTango.SCALAR,
-            PyTango.READ],
+                "format": "%10.3f",
+                "unit": " ",
+                "description": "minimal valid X value of current calibration ",
+            },
+        ],
+        "Xmax": [
+            [PyTango.DevFloat, PyTango.SCALAR, PyTango.READ],
             {
-                'format': "%10.3f",
-                'unit': " ",
-                'description': "maximal valid X value of current calibration ",
-            }],
-        'Ymin':
-            [[PyTango.DevFloat,
-            PyTango.SCALAR,
-            PyTango.READ],
+                "format": "%10.3f",
+                "unit": " ",
+                "description": "maximal valid X value of current calibration ",
+            },
+        ],
+        "Ymin": [
+            [PyTango.DevFloat, PyTango.SCALAR, PyTango.READ],
             {
-                'format': "%10.3f",
-                'unit': " ",
-                'description': "minimal valid Y value of current calibration ",
-            }],
-
-        'Ymax':
-            [[PyTango.DevFloat,
-            PyTango.SCALAR,
-            PyTango.READ],
+                "format": "%10.3f",
+                "unit": " ",
+                "description": "minimal valid Y value of current calibration ",
+            },
+        ],
+        "Ymax": [
+            [PyTango.DevFloat, PyTango.SCALAR, PyTango.READ],
             {
-                'format': "%10.3f",
-                'unit': " ",
-                'description': "maximal valid Y value of current calibration ",
-            }],
-
-        'dataset_size':
-            [[PyTango.DevLong,
-            PyTango.SCALAR,
-            PyTango.READ],
+                "format": "%10.3f",
+                "unit": " ",
+                "description": "maximal valid Y value of current calibration ",
+            },
+        ],
+        "dataset_size": [
+            [PyTango.DevLong, PyTango.SCALAR, PyTango.READ],
             {
-                'format': "%d",
-                'unit': " ",
-                'min alarm': "0",
-                'description': "Number of data (~matching lines in .calib files)",
-            }],
-
-        'calib_order':
-            [[PyTango.DevShort,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
+                "format": "%d",
+                "unit": " ",
+                "min alarm": "0",
+                "description": "Number of data (~matching lines in .calib files)",
+            },
+        ],
+        "calib_order": [
+            [PyTango.DevShort, PyTango.SCALAR, PyTango.READ_WRITE],
             {
-                'format': "%d",
-                'unit': " ",
-                'description': "Order of the given calibration.",
-            }],
-
-        'fit_order':
-            [[PyTango.DevShort,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
+                "format": "%d",
+                "unit": " ",
+                "description": "Order of the given calibration.",
+            },
+        ],
+        "fit_order": [
+            [PyTango.DevShort, PyTango.SCALAR, PyTango.READ_WRITE],
             {
-                'format': "%d",
-                'unit': " ",
-                'description': "Order of the polynomia to use to fit raw data.",
-            }],
-
-        'calib_type':
-            [[PyTango.DevString,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
+                "format": "%d",
+                "unit": " ",
+                "description": "Order of the polynomia to use to fit raw data.",
+            },
+        ],
+        "calib_type": [
+            [PyTango.DevString, PyTango.SCALAR, PyTango.READ_WRITE],
             {
-                'format': "%s",
-                'unit': " ",
-                'description': "Type of the given calibration : TABLE or POLY",
-            }],
-
-        'calib_name':
-            [[PyTango.DevString,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
+                "format": "%s",
+                "unit": " ",
+                "description": "Type of the given calibration : TABLE or POLY",
+            },
+        ],
+        "calib_name": [
+            [PyTango.DevString, PyTango.SCALAR, PyTango.READ_WRITE],
             {
-                'format': "%s",
-                'unit': " ",
-                'description': "Name of the calibration read from calib file",
-            }],
-
-        'calib_time':
-            [[PyTango.DevLong,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
+                "format": "%s",
+                "unit": " ",
+                "description": "Name of the calibration read from calib file",
+            },
+        ],
+        "calib_time": [
+            [PyTango.DevLong, PyTango.SCALAR, PyTango.READ_WRITE],
             {
-                'format': "%d",
-                'unit': " ",
-                'description': "Timestamp of the calibration in seconds from Epoch",
-            }],
-
-        'calib_description':
-            [[PyTango.DevString,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
+                "format": "%d",
+                "unit": " ",
+                "description": "Timestamp of the calibration in seconds from Epoch",
+            },
+        ],
+        "calib_description": [
+            [PyTango.DevString, PyTango.SCALAR, PyTango.READ_WRITE],
             {
-                'format': "%s",
-                'unit': " ",
-                'description': "Description of the calibration read from calib file",
-            }],
-
-        'reconstruction_method':
-            # not written in .calib file...
-            [[PyTango.DevString,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
+                "format": "%s",
+                "unit": " ",
+                "description": "Description of the calibration read from calib file",
+            },
+        ],
+        "reconstruction_method":
+        # not written in .calib file...
+        [
+            [PyTango.DevString, PyTango.SCALAR, PyTango.READ_WRITE],
             {
-                'format': "%s",
-                'unit': " ",
-                'description': "Reconstruction method : INTERPOLATION or POLYFIT ",
-            }],
-
-        'Xdata':
-            [[PyTango.DevFloat,
-            PyTango.SPECTRUM,
-            PyTango.READ_WRITE, 2000],
-            {
-                'description': "X raw data",
-            }],
-
-        'Ydata':
-            [[PyTango.DevFloat,
-            PyTango.SPECTRUM,
-            PyTango.READ_WRITE, 2000],
-            {
-                'description': "Y raw data",
-            }],
-
-        'file_name':
-            [[PyTango.DevString,
-            PyTango.SCALAR,
-            PyTango.READ_WRITE],
-            {
-                'format': "%s",
-                'unit': " ",
-                'description': "Name of the calibrationfile",
-            }],
-
-        }
+                "format": "%s",
+                "unit": " ",
+                "description": "Reconstruction method : INTERPOLATION or POLYFIT ",
+            },
+        ],
+        "Xdata": [
+            [PyTango.DevFloat, PyTango.SPECTRUM, PyTango.READ_WRITE, 2000],
+            {"description": "X raw data"},
+        ],
+        "Ydata": [
+            [PyTango.DevFloat, PyTango.SPECTRUM, PyTango.READ_WRITE, 2000],
+            {"description": "Y raw data"},
+        ],
+        "file_name": [
+            [PyTango.DevString, PyTango.SCALAR, PyTango.READ_WRITE],
+            {"format": "%s", "unit": " ", "description": "Name of the calibrationfile"},
+        ],
+    }
 
 
 def main():
     # sys.argv  = ['Xcalibuds.py', 't26']
     try:
         py = PyTango.Util(sys.argv)
-        py.add_class(XcalibudsClass, Xcalibuds, 'Xcalibuds')
+        py.add_class(XcalibudsClass, Xcalibuds, "Xcalibuds")
 
         U = PyTango.Util.instance()
 
@@ -535,9 +529,10 @@ def main():
         U.server_run()
 
     except PyTango.DevFailed as e:
-        print('-------> Received a DevFailed exception:', e)
+        print("-------> Received a DevFailed exception:", e)
     except Exception as e:
-        print( '-------> An unforeseen exception occured....', e)
+        print("-------> An unforeseen exception occured....", e)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

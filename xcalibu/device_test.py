@@ -4,33 +4,33 @@
 import sys
 import PyTango
 
-_ds_name = sys.argv[1]
+DS_NAME = sys.argv[1]
 
-print "DS name =", _ds_name
+print(f"DS name ={ DS_NAME}")
 
-dp = PyTango.DeviceProxy(_ds_name)
+DEV_PROXY = PyTango.DeviceProxy(DS_NAME)
 
-print "DS State is", dp.state()
-print "Calib name = ", dp.calib_name
-print " Xmin=%g" % dp.Xmin
-print " Xmax=%g" % dp.Xmax
+print(f"DS State is {DEV_PROXY.state()}")
+print(f"Calib name = {DEV_PROXY.calib_name}")
+print(f" Xmin={DEV_PROXY.Xmin}")
+print(f" Xmax={DEV_PROXY.Xmax}")
 
-print " Ymin=%g" % dp.Ymin
-print " Ymax=%g" % dp.Ymax
+print(f" Ymin={DEV_PROXY.Ymin}")
+print(f" Ymax={DEV_PROXY.Ymax}")
 
-if dp.calib_type == "TABLE":
-    print " fit order = %d" % dp.fit_order
+if DEV_PROXY.calib_type == "TABLE":
+    print(f" fit order = {DEV_PROXY.fit_order}")
 
-if dp.calib_type == "POLY":
-    print " calib order = %d" % dp.calib_order
+if DEV_PROXY.calib_type == "POLY":
+    print(f"calib order = {DEV_PROXY.calib_order}")
 
-print " f(3)=%g" % dp.get_y(3)
-print " f(1)=%g" % dp.get_y(1)
+print(f" f(3)={DEV_PROXY.get_y(3)}" )
+print(f" f(1)={DEV_PROXY.get_y(1)}")
 
 
 try:
-    print " f(666)=%g" % dp.get_y(666)
-except:
-    print " 666 is out of range"
+    print(f" f(666)={DEV_PROXY.get_y(666)}")
+except Exception:
+    print(f" 666 is out of range")
 
 # must return : -0.444837391376

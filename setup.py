@@ -7,26 +7,23 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="xcalibu",
-    version="0.9.0",
+    version="0.9.1",
     description="Calibration library",
     long_description=long_description,
     url="https://github.com/cguilloud/xcalibu",
     author="Cyril Guilloud (ESRF-BCU)",
     author_email="prenom.name@truc.fr",
     packages=setuptools.find_packages(),
-
     include_package_data=True,
-
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     entry_points={
-      "console_scripts": [
-        "xcalibu = xcalibu.xcalibu:main",
-        "xcalibu_server = xcalibu.Xcalibuds:main",
-      ]
+        "console_scripts": [
+            "xcalibu = xcalibu.xcalibu:main",
+            "xcalibu_server = xcalibu.Xcalibuds:main",
+        ]
     },
 )
-
