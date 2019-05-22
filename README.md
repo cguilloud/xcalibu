@@ -1,17 +1,24 @@
 # Xcalibu
 
-
 author: Cyril Guilloud ESRF BCU 2013-2019
 
-
 Xcalibu is a python library to manage calibrations tables or polynomia.
+It includes a PyTango device server in order to optionally run it as a server.
 
 xcalibu.py : python library
 Xcalibuds.py : PyTango device server
 
+Xcalibu name comes from the first use of this library to calibrate undulators,
+devices increasing X-ray flux on synchrotron's beamlines.
+
+Curious reader can have look here:
+
+* https://en.wikipedia.org/wiki/Undulator
+* https://en.wikipedia.org/wiki/European_Synchrotron_Radiation_Facility
 
 ## installation
 
+pip install xcalibu
 
 ## usage
 

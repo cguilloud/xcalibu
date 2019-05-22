@@ -48,7 +48,8 @@
 # *FIT_ORDER (for a TABLE calib and POLYFIT reconstruction_method)
 
 __author__ = "cyril.guilloud@esrf.fr"
-__date__ = "2012-2018"
+__date__ = "2012-2019"
+__version__ = "0.9.1"
 
 import datetime
 import logging
@@ -66,6 +67,8 @@ except:
 
 log = logging.getLogger("XCALIBU")
 LOG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
+
+__all__ = ["Xcalibu", "XCalibError"]
 
 
 class XCalibError(Exception):
@@ -307,7 +310,7 @@ class Xcalibu:
                     "error in calibration loading (file=%s)" % _calib_file_name
                 )
         elif _calib_string is not None:
-            print("loading calib from string:")
+            # print("loading calib from string:")
             calib_source = _calib_string.split("\n")
 
         try:
@@ -684,7 +687,7 @@ class Xcalibu:
 
             print(self.x_calc)
             print(self.y_calc)
-            plt.plot(self.x_calc, self.y_calc, "o" , label="calculated curve")
+            plt.plot(self.x_calc, self.y_calc, "o", label="calculated curve")
 
             # first_legend = plt.legend(handles=[] , loc="best")
 
@@ -704,7 +707,7 @@ class Xcalibu:
                 )
                 plt.show()
             elif _rec_method == "INTERPOLATION":
-                p2 = plt.plot(self.x_raw, self.y_raw, "o", label= "data", linestyle="-")
+                p2 = plt.plot(self.x_raw, self.y_raw, "o", label="data", linestyle="-")
                 plt.show()
             else:
                 log.error("plot : Unknown method : %s" % _rec_method)
