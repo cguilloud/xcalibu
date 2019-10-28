@@ -49,7 +49,7 @@
 
 __author__ = "cyril.guilloud@esrf.fr"
 __date__ = "2012-2019"
-__version__ = "0.9.1"
+__version__ = "0.9.2"
 
 import datetime
 import logging
@@ -621,6 +621,15 @@ class Xcalibu:
         except IndexError:
             # Search next point
             idx = numpy.searchsorted(self.x_raw, x, side="left")
+
+            # If 'idx' is a boundary of the calibration, no interpolation.
+            if idx >= len(self.x_raw):
+                #print("Oups, found idx %d (max %d) for value %g (max %g). return max array value"%(idx, len(self.x_raw)-1, x, self.x_raw[-1]))
+                return self.y_raw[len(self.x_raw)-1]
+            if idx <= 0:
+                #print("Oups, found idx % for value %g (min %g). return min array value"%(idx, x, self.x_raw[0]))
+                return self.y_raw[0]
+
             x1 = self.x_raw[idx]
             x0 = self.x_raw[idx - 1]
 

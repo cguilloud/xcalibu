@@ -7,9 +7,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="xcalibu",
-    version="0.9.1",
+    version="0.9.2",
     description="Calibration library",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/cguilloud/xcalibu",
     author="Cyril Guilloud (ESRF-BCU)",
     author_email="prenom.name@truc.fr",
@@ -17,7 +18,7 @@ setuptools.setup(
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
         "Operating System :: OS Independent",
     ],
     entry_points={
