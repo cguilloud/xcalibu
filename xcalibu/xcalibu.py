@@ -51,7 +51,7 @@ __author__ = "cyril.guilloud@esrf.fr"
 __date__ = "2012-2019"
 __version__ = "0.9.2"
 
-import datetime
+import os
 import logging
 import numpy
 import re
@@ -62,11 +62,13 @@ try:
     import timedisplay
 
     TIME_DISPLAY_FOUND = True
-except:
+except ImportError:
     TIME_DISPLAY_FOUND = False
 
 log = logging.getLogger("XCALIBU")
 LOG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
+
+XCALIBU_DIRBASE = os.path.dirname(os.path.realpath(__file__))
 
 __all__ = ["Xcalibu", "XCalibError"]
 
@@ -837,14 +839,14 @@ def demo(do_plot):
     log.info("TEST - inverse_demo_calib_string(%f) = %f" % (4, myCalibString.get_x(4)))
 
     log.info("============= POLY calibration from file ========================\n")
-    myCalibPoly = Xcalibu(calib_file_name="./examples/poly.calib")
+    myCalibPoly = Xcalibu(calib_file_name=XCALIBU_DIRBASE + "/examples/poly.calib")
     log.info("xcalibu - TEST - Gap for %f keV : %f" % (5, myCalibPoly.get_y(5)))
 
     log.info(
         "====== undu TABLE calibration from file with POLYFIT reconstruction method ====\n"
     )
     myCalib2 = Xcalibu(
-        calib_file_name="./examples/undu_table.calib",
+        calib_file_name=XCALIBU_DIRBASE + "/examples/undu_table.calib",
         fit_order=2,
         reconstruction_method="POLYFIT",
     )
@@ -855,7 +857,7 @@ def demo(do_plot):
         "===== undu TABLE calibration from file with INTERPOLATION rec. method ======\n"
     )
     myCalib3 = Xcalibu(
-        calib_file_name="./examples/table.calib",
+        calib_file_name=XCALIBU_DIRBASE + "/examples/table.calib",
         fit_order=2,
         reconstruction_method="INTERPOLATION",
     )
@@ -869,31 +871,31 @@ def demo(do_plot):
     log.info("TEST - Gap for %f keV : %f" % (12, myCalib3.get_y(12)))
 
     myCalibRingTx = Xcalibu(
-        calib_file_name="./examples/hpz_ring_Tx.calib",
+        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Tx.calib",
         fit_order=5,
         reconstruction_method="POLYFIT",
     )
 
     myCalibRingTy = Xcalibu(
-        calib_file_name="./examples/hpz_ring_Ty.calib",
+        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Ty.calib",
         fit_order=4,
         reconstruction_method="POLYFIT",
     )
 
     myCalibRingTz = Xcalibu(
-        calib_file_name="./examples/hpz_ring_Tz.calib",
+        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Tz.calib",
         fit_order=20,
         reconstruction_method="POLYFIT",
     )
 
     myCalibRingRx = Xcalibu(
-        calib_file_name="./examples/hpz_ring_Rx.calib",
+        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Rx.calib",
         fit_order=5,
         reconstruction_method="POLYFIT",
     )
 
     myCalibRingRy = Xcalibu(
-        calib_file_name="./examples/hpz_ring_Ry.calib",
+        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Ry.calib",
         fit_order=5,
         reconstruction_method="POLYFIT",
     )
