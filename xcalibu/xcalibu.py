@@ -108,6 +108,7 @@ class Xcalibu:
         self.Ymax = 0.0
 
         self._data_lines = 0
+        self._comments = []
 
         """
         Parameters recording
@@ -334,6 +335,7 @@ class Xcalibu:
                         "line %4d%s : comment    : {%s}"
                         % (_ligne_nb, _part_letter, line.rstrip())
                     )
+                    self._comments.append(line)
                     continue
 
                 # Matches lines like :
@@ -664,9 +666,19 @@ class Xcalibu:
         _sf.write("CALIB_TYPE=%s\n" % self.get_calib_type())
         _sf.write("CALIB_TIME=%s\n" % self.get_calib_time())
         _sf.write("CALIB_DESC=%s\n" % self.get_calib_description())
+        if self.get_calib_type() == "POLY":
+            _sf.write("CALIB_XMIN=%f\n" % self.min_x())
+            _sf.write("CALIB_XMAX=%f\n" % self.max_x())
+            _sf.write("CALIB_ORDER=%d\n" % self.get_calib_order())
+        _sf.write("\n")
+        
+        # Preserve original comments in saved file
+        for c in self._comments:
+            if c == "# XCALIBU CALIBRATION":
+                continue
+            _sf.write(c)
 
         if self.get_calib_type() == "TABLE":
-            _sf.write("\n")
             _xxx = self.get_raw_x()
             _yyy = self.get_raw_y()
 
@@ -677,7 +689,6 @@ class Xcalibu:
             _sf.write("CALIB_XMIN=%f\n" % self.min_x())
             _sf.write("CALIB_XMAX=%f\n" % self.max_x())
             _sf.write("CALIB_ORDER=%d\n" % self.get_calib_order())
-            _sf.write("\n")
 
             for ii in range(self.get_calib_order() + 1):
                 _sf.write("C%d = %f\n" % (ii, self.coeffs[self.get_calib_order() - ii]))
