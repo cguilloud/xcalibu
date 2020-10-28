@@ -58,6 +58,8 @@ import re
 import sys
 import time
 
+from operator import itemgetter
+
 try:
     import timedisplay
 
@@ -502,6 +504,10 @@ class Xcalibu:
             " Xmin = %10g  Xmax = %10g  Nb points =%5d"
             % (self.Xmin, self.Xmax, _nb_points)
         )
+
+        # ensure data is sorted in ascending order
+        sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
+        _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
 
         self.x_raw = numpy.array(_xvalues)
         self.y_raw = numpy.array(_yvalues)
