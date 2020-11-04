@@ -842,6 +842,33 @@ class Xcalibu:
             )
             return -1
 
+    def del_x(self, x):
+        """
+        Delete a point in table given x or y
+        """
+        if x is not None:
+
+            log.debug("xcalibu - %s - delete point x = %f" % (self.get_calib_name(), y))
+
+
+
+        # Check validity range
+        if self.is_in_valid_y_range(y):
+            x = self.calc_fitted_reverse_value(y)
+            log.debug("x=%f" % x)
+            return x
+        else:
+            # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax))
+            log.error(
+                "xcalibu - Error : y=%f is not in valid range for this R calibration"
+                % y
+            )
+            return -1
+
+    def _del(self, point)
+        index = np.argwhere(x==3)
+        y = np.delete(x, index)
+
 
 def demo(do_plot):
 

@@ -19,3 +19,14 @@ def test_interpolation_unsorted(xcalib_demo):
     assert calib.get_y(4) == 1
     assert calib.get_y(4.5) == 1.5
     assert calib.get_y(8) == 2
+
+
+def test_edit_table(xcalib_demo):
+    calib = xcalib_demo("unsorted_table.calib")
+    assert calib.get_y(4) == 1
+    calib.del_x(4)
+    assert calib.get_y(4) == 1
+    with pytest.raises(XCalibError):
+        calib.del_x(4)  # does not exist in table
+
+    assert calib.get_y(4) == 1
