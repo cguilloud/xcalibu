@@ -284,7 +284,7 @@ class Xcalibu:
     Calibration loading :
     * reads calib file
     * parses header and data
-    * fits points if requiered
+    * fits points if required
     """
 
     def load_calib(self):
@@ -496,16 +496,15 @@ class Xcalibu:
             self.Ymin = _y_min
             self.Ymax = _y_max
             log.info(
+                " Xmin = %10g  Xmax = %10g  Nb points =%5d"
+                % (self.Xmin, self.Xmax, _nb_points)
+            )
+            log.info(
                 " Ymin = %10g  Ymax = %10g  Nb points =%5d"
                 % (self.Ymin, self.Ymax, _nb_points)
             )
 
-        log.info(
-            " Xmin = %10g  Xmax = %10g  Nb points =%5d"
-            % (self.Xmin, self.Xmax, _nb_points)
-        )
-
-        # ensure data is sorted in ascending order
+        # Ensure data is sorted in ascending order
         sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
         _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
 
@@ -557,7 +556,7 @@ class Xcalibu:
         try:
             self.coeffs = numpy.polyfit(self.x_raw, self.y_raw, _order)
         except numpy.RankWarning:
-            print("[xcalibu.py] not enought data")
+            print("[xcalibu.py] not enough data")
 
         log.info("polynom coeffs = ")
         self.coeffs
@@ -740,6 +739,10 @@ class Xcalibu:
             else:
                 log.error("plot : Unknown method : %s" % _rec_method)
 
+    def print_table(self):
+        for x, y in zip(self.x_raw, self.y_raw):
+            print(x, y)
+
     """
     Calibration limits
     """
@@ -842,34 +845,70 @@ class Xcalibu:
             )
             return -1
 
-    def del_x(self, x):
+    def delete(self, x=None, y=None):
         """
-        Delete a point in table given x or y
+        Delete a point (x, y) in table given X or Y or both.
         """
+        if x is None and y is None:
+            return
+
+        criteria = numpy.full(len(self.x_raw), True)
         if x is not None:
+            criteria = criteria & (self.x_raw == x)
+        if y is not None:
+            criteria = criteria & (self.y_raw == y)
 
-            log.debug("xcalibu - %s - delete point x = %f" % (self.get_calib_name(), y))
+        index = numpy.argwhere(criteria).flatten()
 
+        if len(index) == 0:
+            raise XCalibError(f"Point ({x or ''}, {y or ''}) does not exist in table")
+        
+        if len(index) > 1:
+            if x is None or y is None:
+                # several points found with given X or Y. Need to give both X and Y.
+                raise XCalibError(f"Ambiguous match ({len(index)} points), specify both X and Y")
+            else:
+                # several identical points found, delete only the first one
+                index = index[0]
+        
+        log.debug(f"xcalibu - {self.get_calib_name()} - delete point ({self.x_raw[index]}, {self.y_raw[index]})")
+        
+        self.x_raw = numpy.delete(self.x_raw, index)
+        self.y_raw = numpy.delete(self.y_raw, index)
+        
+        self._update_min_max_len()
 
+    def insert(self, x, y):
+        """
+        Insert a point (x, y) in sorted table.
+        
+        X and Y can be float or arrays.
+        """
+        if self._calib_type != "TABLE":
+            raise TypeError("Xcalibu: calibration must be of TABLE type")
 
-        # Check validity range
-        if self.is_in_valid_y_range(y):
-            x = self.calc_fitted_reverse_value(y)
-            log.debug("x=%f" % x)
-            return x
-        else:
-            # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax))
-            log.error(
-                "xcalibu - Error : y=%f is not in valid range for this R calibration"
-                % y
-            )
-            return -1
-
-    def _del(self, point)
-        index = np.argwhere(x==3)
-        y = np.delete(x, index)
-
-
+        x = numpy.atleast_1d(x)
+        y = numpy.atleast_1d(y)
+        assert len(x) == len(y)
+        
+        # search index where to insert x in sorted array
+        index = numpy.searchsorted(self.x_raw, x)
+        self.x_raw = numpy.insert(self.x_raw, index, x)
+        self.y_raw = numpy.insert(self.y_raw, index, y)
+        
+        self._update_min_max_len()
+        
+        log.debug(f"xcalibu - {self.get_calib_name()} - insert point ({x}, {y})")
+        
+    def _update_min_max_len(self):
+        self._data_lines = self.nb_calib_points = len(self.x_raw)
+        
+        self.Xmin = self.x_raw[0]  # x_raw is sorted
+        self.Xmax = self.x_raw[-1]
+        self.Ymin = min(self.y_raw)
+        self.Ymax = max(self.y_raw)
+        
+        
 def demo(do_plot):
 
     log.info("============ from demo_calib_string string ===================\n")
