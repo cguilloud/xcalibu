@@ -95,11 +95,13 @@ class Xcalibu:
     ):
         self._calib_string = None
         self._calib_file_name = None
+        self._calib_file_format = "SIMPLE"
         self._fit_order = 0
         self._rec_method = None
 
         self._calib_name = None
-        self._calib_type = None
+        self._calib_type = "TABLE"
+        self._calib_time = None
         self._description = None
         self._calib_order = 0
         self._file_name = None
@@ -386,24 +388,34 @@ class Xcalibu:
                     Read DATA line.
                     """
                     if self.get_calib_type() == "TABLE":
-                        # Matches lines like:  U35M [13.000000] = 15.941000
-                        # name of the calib (U35M) must be known.
-                        if self.get_calib_name() is None:
-                            raise XCalibError(
-                                "Parsing Error : Line %d : name of the calibration is unknown."
-                                % _ligne_nb
-                            )
-                        else:
-                            # ()      : save recognized group pattern
-                            # %s      : for the % subs in the string...
-                            # .       : any character except a newline
-                            # (?: re) : Groups regular expressions without remembering matched text.
-                            # \s      : Whitespace, equivalent to [\t\n\r\f].
-                            matchPoint = re.search(
-                                r"%s(?:\s*)\[(.+)\](?:\s*)=(?:\s*)(.+)"
-                                % self.get_calib_name(),
-                                line,
-                            )
+                        # Matches lines like: 13.000000 15.941000 (new format)
+                        matchPoint = re.search(
+                            r"(.+)(?:\s+)(.+)",
+                            line,
+                        )
+
+                        if not matchPoint:
+
+                            # Matches lines like:  U35M [13.000000] = 15.941000 (legacy format)
+                            # name of the calib (U35M) must be known.
+                            if self.get_calib_name() is None:
+                                raise XCalibError(
+                                    "Parsing Error : Line %d : name of the calibration is unknown."
+                                    % _ligne_nb
+                                )
+                            else:
+                                # ()      : save recognized group pattern
+                                # %s      : for the % subs in the string...
+                                # .       : any character except a newline
+                                # (?: re) : Groups regular expressions without remembering matched text.
+                                # \s      : Whitespace, equivalent to [\t\n\r\f].
+                                matchPoint = re.search(
+                                    r"%s(?:\s*)\[(.+)\](?:\s*)=(?:\s*)(.+)"
+                                    % self.get_calib_name(),
+                                    line,
+                                )
+                                if matchPoint:
+                                    self._calib_file_format = "LEGACY"
 
                         if matchPoint:
                             # At least one ligne of the calib data has been read
@@ -687,8 +699,12 @@ class Xcalibu:
             _xxx = self.get_raw_x()
             _yyy = self.get_raw_y()
 
-            for ii in range(_xxx.size):
-                _sf.write("%s[%f] = %f\n" % (_calib_name, _xxx[ii], _yyy[ii]))
+            if self._calib_file_format == "LEGACY":
+                for ii in range(_xxx.size):
+                    _sf.write("%s[%f] = %f\n" % (_calib_name, _xxx[ii], _yyy[ii]))
+            else:
+                for ii in range(_xxx.size):
+                    _sf.write("%f %f\n" % (_xxx[ii], _yyy[ii]))
 
         elif self.get_calib_type() == "POLY":
             _sf.write("CALIB_XMIN=%f\n" % self.min_x())

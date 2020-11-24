@@ -66,3 +66,9 @@ def test_table_insert(xcalib_demo):
     assert calib.Xmin == 0
     assert calib.Ymax == 4
     assert calib.nb_calib_points == nb + 2
+
+
+def test_table_2_columns(xcalib_demo):
+    calib = xcalib_demo("table_2_columns.calib")
+    assert calib.get_y(5) == 0.475166
+    assert calib.get_y(5.25) == 0.495043
