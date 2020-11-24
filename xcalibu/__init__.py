@@ -1,1 +1,1 @@
-from .xcalibu import Xcalibu
+from .xcalibu import Xcalibu, XCalibError

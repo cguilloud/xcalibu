@@ -58,6 +58,8 @@ import re
 import sys
 import time
 
+from operator import itemgetter
+
 try:
     import timedisplay
 
@@ -93,11 +95,13 @@ class Xcalibu:
     ):
         self._calib_string = None
         self._calib_file_name = None
+        self._calib_file_format = "SIMPLE"
         self._fit_order = 0
         self._rec_method = None
 
         self._calib_name = None
-        self._calib_type = None
+        self._calib_type = "TABLE"
+        self._calib_time = None
         self._description = None
         self._calib_order = 0
         self._file_name = None
@@ -108,6 +112,7 @@ class Xcalibu:
         self.Ymax = 0.0
 
         self._data_lines = 0
+        self._comments = []
 
         """
         Parameters recording
@@ -281,7 +286,7 @@ class Xcalibu:
     Calibration loading :
     * reads calib file
     * parses header and data
-    * fits points if requiered
+    * fits points if required
     """
 
     def load_calib(self):
@@ -334,6 +339,7 @@ class Xcalibu:
                         "line %4d%s : comment    : {%s}"
                         % (_ligne_nb, _part_letter, line.rstrip())
                     )
+                    self._comments.append(line)
                     continue
 
                 # Matches lines like :
@@ -382,24 +388,34 @@ class Xcalibu:
                     Read DATA line.
                     """
                     if self.get_calib_type() == "TABLE":
-                        # Matches lines like:  U35M [13.000000] = 15.941000
-                        # name of the calib (U35M) must be known.
-                        if self.get_calib_name() is None:
-                            raise XCalibError(
-                                "Parsing Error : Line %d : name of the calibration is unknown."
-                                % _ligne_nb
-                            )
-                        else:
-                            # ()      : save recognized group pattern
-                            # %s      : for the % subs in the string...
-                            # .       : any character except a newline
-                            # (?: re) : Groups regular expressions without remembering matched text.
-                            # \s      : Whitespace, equivalent to [\t\n\r\f].
-                            matchPoint = re.search(
-                                r"%s(?:\s*)\[(.+)\](?:\s*)=(?:\s*)(.+)"
-                                % self.get_calib_name(),
-                                line,
-                            )
+                        # Matches lines like: 13.000000 15.941000 (new format)
+                        matchPoint = re.search(
+                            r"(.+)(?:\s+)(.+)",
+                            line,
+                        )
+
+                        if not matchPoint:
+
+                            # Matches lines like:  U35M [13.000000] = 15.941000 (legacy format)
+                            # name of the calib (U35M) must be known.
+                            if self.get_calib_name() is None:
+                                raise XCalibError(
+                                    "Parsing Error : Line %d : name of the calibration is unknown."
+                                    % _ligne_nb
+                                )
+                            else:
+                                # ()      : save recognized group pattern
+                                # %s      : for the % subs in the string...
+                                # .       : any character except a newline
+                                # (?: re) : Groups regular expressions without remembering matched text.
+                                # \s      : Whitespace, equivalent to [\t\n\r\f].
+                                matchPoint = re.search(
+                                    r"%s(?:\s*)\[(.+)\](?:\s*)=(?:\s*)(.+)"
+                                    % self.get_calib_name(),
+                                    line,
+                                )
+                                if matchPoint:
+                                    self._calib_file_format = "LEGACY"
 
                         if matchPoint:
                             # At least one ligne of the calib data has been read
@@ -492,14 +508,17 @@ class Xcalibu:
             self.Ymin = _y_min
             self.Ymax = _y_max
             log.info(
+                " Xmin = %10g  Xmax = %10g  Nb points =%5d"
+                % (self.Xmin, self.Xmax, _nb_points)
+            )
+            log.info(
                 " Ymin = %10g  Ymax = %10g  Nb points =%5d"
                 % (self.Ymin, self.Ymax, _nb_points)
             )
 
-        log.info(
-            " Xmin = %10g  Xmax = %10g  Nb points =%5d"
-            % (self.Xmin, self.Xmax, _nb_points)
-        )
+        # Ensure data is sorted in ascending order
+        sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
+        _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
 
         self.x_raw = numpy.array(_xvalues)
         self.y_raw = numpy.array(_yvalues)
@@ -549,7 +568,7 @@ class Xcalibu:
         try:
             self.coeffs = numpy.polyfit(self.x_raw, self.y_raw, _order)
         except numpy.RankWarning:
-            print("[xcalibu.py] not enought data")
+            print("[xcalibu.py] not enough data")
 
         log.info("polynom coeffs = ")
         self.coeffs
@@ -664,20 +683,33 @@ class Xcalibu:
         _sf.write("CALIB_TYPE=%s\n" % self.get_calib_type())
         _sf.write("CALIB_TIME=%s\n" % self.get_calib_time())
         _sf.write("CALIB_DESC=%s\n" % self.get_calib_description())
+        if self.get_calib_type() == "POLY":
+            _sf.write("CALIB_XMIN=%f\n" % self.min_x())
+            _sf.write("CALIB_XMAX=%f\n" % self.max_x())
+            _sf.write("CALIB_ORDER=%d\n" % self.get_calib_order())
+        _sf.write("\n")
+        
+        # Preserve original comments in saved file
+        for c in self._comments:
+            if c == "# XCALIBU CALIBRATION":
+                continue
+            _sf.write(c)
 
         if self.get_calib_type() == "TABLE":
-            _sf.write("\n")
             _xxx = self.get_raw_x()
             _yyy = self.get_raw_y()
 
-            for ii in range(_xxx.size):
-                _sf.write("%s[%f] = %f\n" % (_calib_name, _xxx[ii], _yyy[ii]))
+            if self._calib_file_format == "LEGACY":
+                for ii in range(_xxx.size):
+                    _sf.write("%s[%f] = %f\n" % (_calib_name, _xxx[ii], _yyy[ii]))
+            else:
+                for ii in range(_xxx.size):
+                    _sf.write("%f %f\n" % (_xxx[ii], _yyy[ii]))
 
         elif self.get_calib_type() == "POLY":
             _sf.write("CALIB_XMIN=%f\n" % self.min_x())
             _sf.write("CALIB_XMAX=%f\n" % self.max_x())
             _sf.write("CALIB_ORDER=%d\n" % self.get_calib_order())
-            _sf.write("\n")
 
             for ii in range(self.get_calib_order() + 1):
                 _sf.write("C%d = %f\n" % (ii, self.coeffs[self.get_calib_order() - ii]))
@@ -722,6 +754,10 @@ class Xcalibu:
                 plt.show()
             else:
                 log.error("plot : Unknown method : %s" % _rec_method)
+
+    def print_table(self):
+        for x, y in zip(self.x_raw, self.y_raw):
+            print(x, y)
 
     """
     Calibration limits
@@ -825,7 +861,70 @@ class Xcalibu:
             )
             return -1
 
+    def delete(self, x=None, y=None):
+        """
+        Delete a point (x, y) in table given X or Y or both.
+        """
+        if x is None and y is None:
+            return
 
+        criteria = numpy.full(len(self.x_raw), True)
+        if x is not None:
+            criteria = criteria & (self.x_raw == x)
+        if y is not None:
+            criteria = criteria & (self.y_raw == y)
+
+        index = numpy.argwhere(criteria).flatten()
+
+        if len(index) == 0:
+            raise XCalibError(f"Point ({x or ''}, {y or ''}) does not exist in table")
+        
+        if len(index) > 1:
+            if x is None or y is None:
+                # several points found with given X or Y. Need to give both X and Y.
+                raise XCalibError(f"Ambiguous match ({len(index)} points), specify both X and Y")
+            else:
+                # several identical points found, delete only the first one
+                index = index[0]
+        
+        log.debug(f"xcalibu - {self.get_calib_name()} - delete point ({self.x_raw[index]}, {self.y_raw[index]})")
+        
+        self.x_raw = numpy.delete(self.x_raw, index)
+        self.y_raw = numpy.delete(self.y_raw, index)
+        
+        self._update_min_max_len()
+
+    def insert(self, x, y):
+        """
+        Insert a point (x, y) in sorted table.
+        
+        X and Y can be float or arrays.
+        """
+        if self._calib_type != "TABLE":
+            raise TypeError("Xcalibu: calibration must be of TABLE type")
+
+        x = numpy.atleast_1d(x)
+        y = numpy.atleast_1d(y)
+        assert len(x) == len(y)
+        
+        # search index where to insert x in sorted array
+        index = numpy.searchsorted(self.x_raw, x)
+        self.x_raw = numpy.insert(self.x_raw, index, x)
+        self.y_raw = numpy.insert(self.y_raw, index, y)
+        
+        self._update_min_max_len()
+        
+        log.debug(f"xcalibu - {self.get_calib_name()} - insert point ({x}, {y})")
+        
+    def _update_min_max_len(self):
+        self._data_lines = self.nb_calib_points = len(self.x_raw)
+        
+        self.Xmin = self.x_raw[0]  # x_raw is sorted
+        self.Xmax = self.x_raw[-1]
+        self.Ymin = min(self.y_raw)
+        self.Ymax = max(self.y_raw)
+        
+        
 def demo(do_plot):
 
     log.info("============ from demo_calib_string string ===================\n")
