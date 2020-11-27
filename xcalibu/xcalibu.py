@@ -324,9 +324,9 @@ class Xcalibu:
             for raw_line in calib_source:
                 _ligne_nb = _ligne_nb + 1
 
-                # Removes optional starting "whitespace" characters :
+                # Removes optional "whitespace" characters :
                 # string.whitespace -> '\t\n\x0b\x0c\r '
-                line = raw_line.lstrip()
+                line = raw_line.strip()
 
                 # Line is empty or full of space(s).
                 if len(line) == 0:
@@ -389,8 +389,13 @@ class Xcalibu:
                     """
                     if self.get_calib_type() == "TABLE":
                         # Matches lines like: 13.000000 15.941000 (new format)
+                        # ()      : save recognized group pattern
+                        # [+-]?   : + or - or nothing
+                        # \d      : any digit [0-9]
+                        # (?: re) : Groups regular expressions without remembering matched text.
+                        # \s      : Whitespace, equivalent to [\t\n\r\f].
                         matchPoint = re.search(
-                            r"(.+)(?:\s+)(.+)",
+                            r"([+-]?\d+\.?\d*[eE]?[+-]*\d*)(?:\s+)([+-]?\d+\.?\d*[eE]?[+-]*\d*)",
                             line,
                         )
 
@@ -679,10 +684,14 @@ class Xcalibu:
         log.info("Saving calib %s in file:%s" % (_calib_name, _file_name))
         _sf = open(_file_name, mode="w+")
         _sf.write("# XCALIBU CALIBRATION\n\n")
-        _sf.write("CALIB_NAME=%s\n" % _calib_name)
-        _sf.write("CALIB_TYPE=%s\n" % self.get_calib_type())
-        _sf.write("CALIB_TIME=%s\n" % self.get_calib_time())
-        _sf.write("CALIB_DESC=%s\n" % self.get_calib_description())
+        if _calib_name:
+            _sf.write("CALIB_NAME=%s\n" % _calib_name)
+        if self.get_calib_type():    
+            _sf.write("CALIB_TYPE=%s\n" % self.get_calib_type())
+        if self.get_calib_time():    
+            _sf.write("CALIB_TIME=%s\n" % self.get_calib_time())
+        if self.get_calib_description():    
+            _sf.write("CALIB_DESC=%s\n" % self.get_calib_description())
         if self.get_calib_type() == "POLY":
             _sf.write("CALIB_XMIN=%f\n" % self.min_x())
             _sf.write("CALIB_XMAX=%f\n" % self.max_x())
@@ -694,6 +703,7 @@ class Xcalibu:
             if c == "# XCALIBU CALIBRATION":
                 continue
             _sf.write(c)
+            _sf.write("\n")
 
         if self.get_calib_type() == "TABLE":
             _xxx = self.get_raw_x()
