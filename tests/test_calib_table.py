@@ -25,6 +25,7 @@ def test_table_load_file(xcalib_demo):
 
 def test_table_interpolation_get_y(xcalib_demo):
     calib = xcalib_demo("table.calib")
+    assert calib.nb_calib_points == 15
     assert calib.get_y(6) == -3
     assert calib.get_y(6.5) == -0.5
     
@@ -72,3 +73,12 @@ def test_table_2_columns(xcalib_demo):
     calib = xcalib_demo("table_2_columns.calib")
     assert calib.get_y(5) == 0.475166
     assert calib.get_y(5.25) == 0.495043
+
+    # test 2 columns with various float number format
+    calib = xcalib_demo("table_2_col.calib")
+    assert calib.nb_calib_points == 15
+    assert calib.get_y(6) == -3
+    assert calib.get_y(6.5) == -0.5
+    
+    with pytest.raises(XCalibError):
+        calib.get_y(-1)  # out of range
