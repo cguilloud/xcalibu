@@ -32,24 +32,24 @@
 #
 # Intrinsec parameters of a calibration (parameters fixed at calib
 # recording/generation):
-# *CALIB_NAME
-# *CALIB_TYPE
-# *CALIB_TIME
-# *CALIB_DESC
+# * CALIB_NAME
+# * CALIB_TYPE
+# * CALIB_TIME
+# * CALIB_DESC
 #
 # and 3 more for polynoms (min and max are automatically calculated for TABLES):
-# *CALIB_XMIN
-# *CALIB_XMAX
-# *CALIB_ORDER
+# * CALIB_XMIN
+# * CALIB_XMAX
+# * CALIB_ORDER
 #
 # Usage parameters (parameters that a user can change to use its
 # calibration):
-# *RECONSTRUCTION_METHOD : POLYFIT or INTERPOLATION
-# *FIT_ORDER (for a TABLE calib and POLYFIT reconstruction_method)
+# * RECONSTRUCTION_METHOD : POLYFIT or INTERPOLATION
+# * FIT_ORDER (for a TABLE calib and POLYFIT reconstruction_method)
 
-__author__ = "cyril.guilloud@esrf.fr"
-__date__ = "2012-2019"
-__version__ = "0.9.2"
+
+# TODO: drop usage of old format ?
+
 
 import os
 import logging
@@ -135,7 +135,7 @@ class Xcalibu:
         if reconstruction_method is not None:
             self.set_reconstruction_method(reconstruction_method)
 
-        # Loads !
+        # Load !
         if (
             self.get_calib_file_name() is not None
             or self.get_calib_string() is not None
@@ -143,30 +143,24 @@ class Xcalibu:
             # A calib string or a file name is defined, try to load the calib.
             self.load_calib()
 
-    """
-    name of the file to use to load/save a calibration.
-    """
-
     def set_calib_file_name(self, fn):
+        """
+        Set name of the file to use to load/save a calibration.
+        """
         log.debug("set_calib_file_name(%s)" % fn)
         self._calib_file_name = fn
 
     def get_calib_file_name(self):
         return self._calib_file_name
 
-    """
-    string to use to create a calibration.
-    """
-
     def set_calib_string(self, calib_string):
+        """
+        Set string to use to create a calibration.
+        """
         self._calib_string = calib_string
 
     def get_calib_string(self):
         return self._calib_string
-
-    """
-    intrinsec calibration parameters
-    """
 
     def set_calib_name(self, value):
         """
@@ -189,7 +183,7 @@ class Xcalibu:
 
     def get_calib_type(self):
         """
-        Returns calibration type read from calibration file or string (field : CALIB_TYPE).
+        Return calibration type read from calibration file or string (field : CALIB_TYPE).
         Can be 'TABLE' or 'POLY'.
         """
         return self._calib_type
@@ -282,25 +276,24 @@ class Xcalibu:
     def get_reconstruction_method(self):
         return self._rec_method
 
-    """
-    Calibration loading :
-    * reads calib file
-    * parses header and data
-    * fits points if required
-    """
-
     def load_calib(self):
+        """
+        Calibration loading :
+        * read calib file (Table or Poly)
+        * parse header and data
+        * fit points if required
+        """
         _x_min = float("inf")
         _x_max = -float("inf")
         _y_min = float("inf")
         _y_max = -float("inf")
         _nb_points = 0
-        _ligne_nb = 0
-        _data_ligne_nb = 0
+        _line_nb = 0
+        _data_line_nb = 0
         _header_line_nb = 0
         _part_letter = (
             "H"
-        )  # letter to indicate parts of the calibration file: H(eader) or D(ata)
+        )  # letter to indicate (in debug) the section of the calibration file: H(eader) or D(ata)
         _xvalues = []
         _yvalues = []
 
@@ -312,37 +305,39 @@ class Xcalibu:
                 calib_source = open(_calib_file_name, mode="r")
             except IOError:
                 raise XCalibError("Unable to open file '%s' \n" % _calib_file_name)
-            except:
+            except Exception:
                 raise XCalibError(
                     "error in calibration loading (file=%s)" % _calib_file_name
                 )
         elif _calib_string is not None:
             # print("loading calib from string:")
             calib_source = _calib_string.split("\n")
+        else:
+            raise RuntimeError("Unable to load calibration: no string of filename provided.")
 
         try:
             for raw_line in calib_source:
-                _ligne_nb = _ligne_nb + 1
+                _line_nb = _line_nb + 1
 
-                # Removes optional "whitespace" characters :
+                # Remove optional "whitespace" characters :
                 # string.whitespace -> '\t\n\x0b\x0c\r '
                 line = raw_line.strip()
 
                 # Line is empty or full of space(s).
                 if len(line) == 0:
-                    log.debug("line %4d%s : empty" % (_ligne_nb, _part_letter))
+                    log.debug("line %4d%s : empty" % (_line_nb, _part_letter))
                     continue
 
                 # Commented line
                 if line[0] == "#":
                     log.debug(
                         "line %4d%s : comment    : {%s}"
-                        % (_ligne_nb, _part_letter, line.rstrip())
+                        % (_line_nb, _part_letter, line.rstrip())
                     )
                     self._comments.append(line)
                     continue
 
-                # Matches lines like :
+                # Matche lines like :
                 # CALIB_<info> = <value>
                 matchCalibInfo = re.search(r"CALIB_(\w+)(?: )*=(?: )*(.+)", line)
                 if matchCalibInfo:
@@ -353,7 +348,7 @@ class Xcalibu:
                     log.debug(
                         "line %4d%s : calib info : %30s   info={%s} value={%s}"
                         % (
-                            _ligne_nb,
+                            _line_nb,
                             _part_letter,
                             matchCalibInfo.group(),
                             _info,
@@ -379,7 +374,7 @@ class Xcalibu:
                     else:
                         _msg = (
                             "Parsing Error : unknown calib field {%s} with value {%s} at line %d"
-                            % (_info, _value, _ligne_nb)
+                            % (_info, _value, _line_nb)
                         )
                         raise XCalibError(_msg)
 
@@ -406,7 +401,7 @@ class Xcalibu:
                             if self.get_calib_name() is None:
                                 raise XCalibError(
                                     "Parsing Error : Line %d : name of the calibration is unknown."
-                                    % _ligne_nb
+                                    % _line_nb
                                 )
                             else:
                                 # ()      : save recognized group pattern
@@ -423,8 +418,8 @@ class Xcalibu:
                                     self._calib_file_format = "LEGACY"
 
                         if matchPoint:
-                            # At least one ligne of the calib data has been read
-                            _data_ligne_nb = _data_ligne_nb + 1
+                            # At least one line of the calib data has been read
+                            _data_line_nb = _data_line_nb + 1
                             # -> no more in header.
                             _part_letter = "D"
 
@@ -433,7 +428,7 @@ class Xcalibu:
                             log.debug(
                                 "line %4d%s : raw calib  : %30s   xval=%8g yval=%8g"
                                 % (
-                                    _ligne_nb,
+                                    _line_nb,
                                     _part_letter,
                                     matchPoint.group(),
                                     _xval,
@@ -453,7 +448,7 @@ class Xcalibu:
                         else:
                             log.debug(
                                 "line %4d%s : nomatch    : {%s}"
-                                % (_ligne_nb, _part_letter, line.rstrip())
+                                % (_line_nb, _part_letter, line.rstrip())
                             )
 
                     elif self.get_calib_type() == "POLY":
@@ -463,14 +458,14 @@ class Xcalibu:
                             r"\s*C(\d+)\s*=\s*([-+]?\d*\.\d+|\d+)", line, re.M | re.I
                         )
                         if matchCoef:
-                            _data_ligne_nb = _data_ligne_nb + 1
+                            _data_line_nb = _data_line_nb + 1
                             _coef = int(matchCoef.group(1))
                             _value = float(matchCoef.group(2))
 
                             log.debug(
                                 "line %4d%s : raw calib  : %15s   coef=%8g value=%8g"
                                 % (
-                                    _ligne_nb,
+                                    _line_nb,
                                     _part_letter,
                                     matchCoef.group(),
                                     _coef,
@@ -485,17 +480,15 @@ class Xcalibu:
                     else:
                         raise XCalibError(
                             "%s line %d : invalid calib type : %s\nraw line : {%s}"
-                            % (calib_source, _ligne_nb, self.get_calib_type(), line)
+                            % (calib_source, _line_nb, self.get_calib_type(), line)
                         )
 
             # End of parsing of lines.
-            if self.get_calib_type() == "POLY":
-                print("coefficients of the POLY:", self.coeffs)
 
-            if _data_ligne_nb == 0:
-                raise XCalibError("No data ligne read in calib file.")
+            if _data_line_nb == 0:
+                raise XCalibError("No data line read in calib file.")
             else:
-                self._data_lines = _data_ligne_nb
+                self._data_lines = _data_line_nb
                 log.info("DATA lines read : %d" % self._data_lines)
 
         except XCalibError:
@@ -521,9 +514,9 @@ class Xcalibu:
                 % (self.Ymin, self.Ymax, _nb_points)
             )
 
-        # Ensure data is sorted in ascending order
-        sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
-        _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
+            # Ensure data is sorted in ascending order
+            sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
+            _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
 
         self.x_raw = numpy.array(_xvalues)
         self.y_raw = numpy.array(_yvalues)
@@ -603,7 +596,9 @@ class Xcalibu:
 
     def calc_poly_value(self, x):
         """
-        Returns the Y value for a given X calculated using the polynom
+        x : float or numpy array of floats
+
+        Return the Y value(s) for given X value(s) calculated using the polynom
         coefficients stored in self.coeffs list.
         Used for fitting polynoms and for POLY calibrations.
         """
@@ -626,7 +621,7 @@ class Xcalibu:
         if self.get_calib_type() == "POLY":
             _order = self.get_calib_order()
         elif self.get_calib_type() == "TABLE":
-            _order = self.get_fit_order()
+            _order = self.get_fit_order()   # gni ???
         else:
             print("[xcalibu.py] calc_fitted_reverse_value : ERROR in calib type")
 
@@ -637,8 +632,8 @@ class Xcalibu:
 
     def calc_interpolated_value(self, x):
         """
-        Returns Y value interpolated from 2 points.
-        For now : only linear interpolation.
+        Return Y value interpolated from 2 points.
+        For now: only linear interpolation.
         """
         try:
             # Search if there is a matching point.
@@ -650,10 +645,10 @@ class Xcalibu:
 
             # If 'idx' is a boundary of the calibration, no interpolation.
             if idx >= len(self.x_raw):
-                #print("Oups, found idx %d (max %d) for value %g (max %g). return max array value"%(idx, len(self.x_raw)-1, x, self.x_raw[-1]))
+                # print("Oups, found idx %d (max %d) for value %g (max %g). return max array value"%(idx, len(self.x_raw)-1, x, self.x_raw[-1]))
                 return self.y_raw[len(self.x_raw)-1]
             if idx <= 0:
-                #print("Oups, found idx % for value %g (min %g). return min array value"%(idx, x, self.x_raw[0]))
+                # print("Oups, found idx % for value %g (min %g). return min array value"%(idx, x, self.x_raw[0]))
                 return self.y_raw[0]
 
             x1 = self.x_raw[idx]
@@ -686,18 +681,18 @@ class Xcalibu:
         _sf.write("# XCALIBU CALIBRATION\n\n")
         if _calib_name:
             _sf.write("CALIB_NAME=%s\n" % _calib_name)
-        if self.get_calib_type():    
+        if self.get_calib_type():
             _sf.write("CALIB_TYPE=%s\n" % self.get_calib_type())
-        if self.get_calib_time():    
+        if self.get_calib_time():
             _sf.write("CALIB_TIME=%s\n" % self.get_calib_time())
-        if self.get_calib_description():    
+        if self.get_calib_description():
             _sf.write("CALIB_DESC=%s\n" % self.get_calib_description())
         if self.get_calib_type() == "POLY":
             _sf.write("CALIB_XMIN=%f\n" % self.min_x())
             _sf.write("CALIB_XMAX=%f\n" % self.max_x())
             _sf.write("CALIB_ORDER=%d\n" % self.get_calib_order())
         _sf.write("\n")
-        
+
         # Preserve original comments in saved file
         for c in self._comments:
             if c == "# XCALIBU CALIBRATION":
@@ -793,7 +788,10 @@ class Xcalibu:
         return self._data_lines
 
     def is_in_valid_x_range(self, x):
-
+        """
+        x: float
+        Return True if <x> is in calibration boundaries.
+        """
         if self.get_calib_type() == "POLY":
             return True
 
@@ -819,9 +817,34 @@ class Xcalibu:
     """
     Values readout
     """
-
     def get_y(self, x):
-        log.debug("xcalibu - %s - get y of %f" % (self.get_calib_name(), x))
+        """
+        x: int or float or numpy array of floats.
+        Return a float or a numpy array of floats.
+        """
+        log.debug("xcalibu - get_y(x) - type of x is: %s" % type(x))
+
+        if type(x) == numpy.ndarray:
+            return self.get_y_array(x)
+        elif type(x) in [float, int]:
+            return self.get_y_scalar(x)
+        else:
+            raise TypeError(f"Type of input is invalid: {type(x)}")
+
+    def get_y_array(self, x_arr):
+        """
+        x_arr: numpy array of floats
+        Return a numpy array of floats
+        """
+        y_arr = numpy.array(list(map(self.get_y_scalar, x_arr)))
+        return y_arr
+
+    def get_y_scalar(self, x):
+        """
+        x: float or int
+        Return a float
+        """
+        # log.debug("xcalibu - %s - get y of %f" % (self.get_calib_name(), x))
 
         if self.is_in_valid_x_range(x):
             if self.get_calib_type() == "TABLE":
@@ -856,6 +879,32 @@ class Xcalibu:
     """
 
     def get_x(self, y):
+        """
+        y: int or float or numpy array of floats.
+        Return a float or a numpy array of floats.
+        """
+        log.debug("xcalibu - get_x(y) - type of y is: %s" % type(y))
+
+        if type(y) == numpy.ndarray:
+            return self.get_x_array(y)
+        elif type(y) in [float, int]:
+            return self.get_x_scalar(y)
+        else:
+            raise TypeError(f"Type of input is invalid: {type(y)}")
+
+    def get_x_array(self, y_arr):
+        """
+        y_arr: numpy array of floats
+        Return a numpy array of floats
+        """
+        x_arr = numpy.array(list(map(self.get_x_scalar, y_arr)))
+        return x_arr
+
+    def get_x_scalar(self, y):
+        """
+        <y>: float or int
+        Return a float
+        """
         log.debug("xcalibu - %s - get x of %f" % (self.get_calib_name(), y))
 
         # Check validity range
@@ -888,7 +937,7 @@ class Xcalibu:
 
         if len(index) == 0:
             raise XCalibError(f"Point ({x or ''}, {y or ''}) does not exist in table")
-        
+
         if len(index) > 1:
             if x is None or y is None:
                 # several points found with given X or Y. Need to give both X and Y.
@@ -896,18 +945,18 @@ class Xcalibu:
             else:
                 # several identical points found, delete only the first one
                 index = index[0]
-        
+
         log.debug(f"xcalibu - {self.get_calib_name()} - delete point ({self.x_raw[index]}, {self.y_raw[index]})")
-        
+
         self.x_raw = numpy.delete(self.x_raw, index)
         self.y_raw = numpy.delete(self.y_raw, index)
-        
+
         self._update_min_max_len()
 
     def insert(self, x, y):
         """
         Insert a point (x, y) in sorted table.
-        
+
         X and Y can be float or arrays.
         """
         if self._calib_type != "TABLE":
@@ -916,25 +965,25 @@ class Xcalibu:
         x = numpy.atleast_1d(x)
         y = numpy.atleast_1d(y)
         assert len(x) == len(y)
-        
+
         # search index where to insert x in sorted array
         index = numpy.searchsorted(self.x_raw, x)
         self.x_raw = numpy.insert(self.x_raw, index, x)
         self.y_raw = numpy.insert(self.y_raw, index, y)
-        
+
         self._update_min_max_len()
-        
+
         log.debug(f"xcalibu - {self.get_calib_name()} - insert point ({x}, {y})")
-        
+
     def _update_min_max_len(self):
         self._data_lines = self.nb_calib_points = len(self.x_raw)
-        
+
         self.Xmin = self.x_raw[0]  # x_raw is sorted
         self.Xmax = self.x_raw[-1]
         self.Ymin = min(self.y_raw)
         self.Ymax = max(self.y_raw)
-        
-        
+
+
 def demo(do_plot):
 
     log.info("============ from demo_calib_string string ===================\n")
@@ -991,6 +1040,12 @@ def demo(do_plot):
         reconstruction_method="POLYFIT",
     )
 
+    myCalibCubic = Xcalibu(
+        calib_file_name=XCALIBU_DIRBASE + "/examples/cubic.calib",
+        fit_order=3,
+        reconstruction_method="POLYFIT",
+    )
+
     myCalibRingTz = Xcalibu(
         calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Tz.calib",
         fit_order=20,
@@ -1019,9 +1074,7 @@ def demo(do_plot):
     myCalibRingRy.set_calib_file_name("ttt.calib")
     myCalibRingRy.save()
     print("OK")
-    print(
-        "------------------------------------------------------------------------------"
-    )
+    print("---------------------------------------------------------------------------")
 
     print("Example : creation of an empty calib then populate it with in-memory data")
     myDynamicCalib = Xcalibu()
@@ -1034,9 +1087,16 @@ def demo(do_plot):
     myDynamicCalib.set_raw_y(numpy.array([3, 6, 5, 4, 2, 5, 7, 3, 7, 4]))
     myDynamicCalib.save()
     print("myDynamicCalib.get_y(2.3)=%f" % myDynamicCalib.get_y(2.3))
-    print(
-        "------------------------------------------------------------------------------"
-    )
+    print("---------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------")
+
+    print(dir(myCalibCubic))
+    print(myCalibCubic.coeffs)
+
+    print("---------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------")
+    print("---------------------------------------------------------------------------")
 
     if do_plot:
         # myCalib1.plot()
@@ -1045,6 +1105,7 @@ def demo(do_plot):
         # myCalibRingTx.plot()
         myCalibRingTy.plot()
         myDynamicCalib.plot()
+        myCalibCubic.plot()
         # myCalibRingTz.plot()
         # myCalibRingRx.plot()
         # myCalibRingRy.plot()
@@ -1110,9 +1171,9 @@ def main():
         parser.print_help()
         print("")
         print("Argument:")
-        print("  demo                  Launches some examples of calibrations")
+        print("  demo                  Launche some examples of calibrations")
         print(
-            "  <calib_file>          Launches demo using <calib_file> calibration file"
+            "  <calib_file>          Launche demo using <calib_file> calibration file"
         )
         print("")
     else:
@@ -1176,7 +1237,7 @@ demo_calib_string = """
 CALIB_NAME = B52
 CALIB_TYPE = TABLE
 CALIB_TIME = 1400081171.300155
-CALIB_DESC = "test table : example of matching lines"
+CALIB_DESC = 'test table : example of matching lines'
 #CALIB_TITI = 14
 
 B52[0.8e-2] = -0.83e-2
