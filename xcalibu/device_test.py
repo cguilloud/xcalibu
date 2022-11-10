@@ -1,5 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
+"""
+Script to test xcalibu Tango device server
+usage:
+   device_test.py <ds_url>
+"""
 
 import sys
 import PyTango
@@ -24,13 +29,13 @@ if DEV_PROXY.calib_type == "TABLE":
 if DEV_PROXY.calib_type == "POLY":
     print(f"calib order = {DEV_PROXY.calib_order}")
 
-print(f" f(3)={DEV_PROXY.get_y(3)}" )
+print(f" f(3)={DEV_PROXY.get_y(3)}")
 print(f" f(1)={DEV_PROXY.get_y(1)}")
 
 
 try:
     print(f" f(666)={DEV_PROXY.get_y(666)}")
 except Exception:
-    print(f" 666 is out of range")
+    print(" 666 is out of range")
 
 # must return : -0.444837391376
