@@ -53,6 +53,7 @@
 
 import os
 import logging
+import numbers
 import numpy
 import re
 import sys
@@ -826,7 +827,7 @@ class Xcalibu:
 
         if type(x) == numpy.ndarray:
             return self.get_y_array(x)
-        elif type(x) in [float, int]:
+        elif isinstance(x, numbers.Number):  # int float numpy.int* numpy.float*
             return self.get_y_scalar(x)
         else:
             raise TypeError(f"Type of input is invalid: {type(x)}")
@@ -887,7 +888,7 @@ class Xcalibu:
 
         if type(y) == numpy.ndarray:
             return self.get_x_array(y)
-        elif type(y) in [float, int]:
+        elif isinstance(y, numbers.Number):  # int float numpy.int* numpy.float*
             return self.get_x_scalar(y)
         else:
             raise TypeError(f"Type of input is invalid: {type(y)}")

@@ -2,6 +2,9 @@
 
 *~
 build/
+dist/
+
+xcalibu.egg-info/
 
 ddd.calib
 ttt.calib

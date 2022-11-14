@@ -15,7 +15,7 @@ Xcalibu name comes from the first use of this library to calibrate undulators at
 
 ## installation
 
-pip install xcalibu
+Available on PyPi or anaconda.org
 
 ## usage
 
