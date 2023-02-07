@@ -85,3 +85,20 @@ XCALIBU - INFO - Plotting
 %
 
 ```
+
+
+
+## command line usage
+
+Options:
+  -h: help
+  -p: plot
+  -d: debug
+
+
+  -t type
+  -r reconstruction_method
+  -k kind of interpolation
+  -n name
+  
+  
