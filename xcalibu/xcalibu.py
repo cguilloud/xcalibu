@@ -46,14 +46,16 @@
 # calibration):
 # * RECONSTRUCTION_METHOD : POLYFIT or INTERPOLATION
 # * FIT_ORDER (for a TABLE calib and POLYFIT reconstruction_method)
+#
+# Ndp: https://www.desmos.com/calculator?lang=fr
 
 
 import logging
 import numbers
 import numpy
+from numpy.polynomial.polynomial import Polynomial
 from operator import itemgetter
 import os
-import pprint
 import re
 from scipy import interpolate
 import sys
@@ -91,40 +93,45 @@ class Xcalibu:
         calib_name=None,
         calib_string=None,
         calib_file_name=None,
+        calib_type=None,
         fit_order=None,
+        coeffs=None,
+        polynomial=None,
         reconstruction_method=None,
         interpol_kind="linear",
-        name=None,
         description=None
     ):
+
+        # Default parameters (accessible via constructor)
+        self._calib_name = calib_name
         self._calib_string = None
         self._calib_file_name = None
-        self._calib_file_format = "SIMPLE"
+        self._calib_type = None
         self._fit_order = 0
+        self._poly_coeffs = coeffs       # Polynomial coefficients in order of increasing degree (numpy Polynomial rule)
+        self._polynomial = None          # numpy Polynomial object
         self._rec_method = None
+        self._interpol_kind = "linear"
 
-        self._calib_name = name
-        self._calib_type = "TABLE"
+        # internal parameters
         self._calib_time = None
         self._description = description
-        self._calib_order = 0
-        self._file_name = None
-
+        self._calib_order = 0  # Order of the polynom used for POLY calibrations.
+        self._calib_file_format = "XCALIBU"  # "TWO_COLS" | "ONE_COL"
         self.is_monotonic = None
         self.is_increasing = None
 
-        self.Xmin = 0.0
-        self.Xmax = 0.0
-        self.Ymin = 0.0
-        self.Ymax = 0.0
+        self.Xmin = numpy.nan
+        self.Xmax = numpy.nan
+        self.Ymin = numpy.nan
+        self.Ymax = numpy.nan
 
         self._data_lines = 0
         self._comments = []
 
         """
-        Parameters recording
+        Constructor parameters recording
         """
-
         # Calib name
         if calib_name is not None:
             self.set_calib_name(calib_name)
@@ -138,15 +145,27 @@ class Xcalibu:
         if calib_file_name is not None:
             self.set_calib_file_name(calib_file_name)
 
-        # Poly order to be used by reconstruction method for TABLE calibrations.
+        # Calib Type
+        if calib_type is not None:
+            self.set_calib_type(calib_type)
+
+        # Polynom order to be used by reconstruction method for TABLE calibrations.
         if fit_order is not None:
             self.set_fit_order(fit_order)
 
-        # Reconstruction method for TABLE calibrations:
+        # Coeffs
+        if coeffs is not None:
+            self.set_coeffs(coeffs)
+
+        # Reconstruction method for TABLE calibrations of for reverse POLY.
         # * INTERPOLATION : interpolation segment by segment.
         # * POLYFIT : polynomial fitting of the dataset.
         if reconstruction_method is not None:
             self.set_reconstruction_method(reconstruction_method, interpol_kind)
+
+        # Description
+        if description is not None:
+            self.set_calib_description(description)
 
         # Load !
         if (
@@ -155,18 +174,14 @@ class Xcalibu:
         ):
             # A calib string or a file name is defined, try to load the calib.
             self.load_calib()
-
-        if self.get_reconstruction_method() == "INTERPOLATION":
+            self.check_monotonic()
             self.compute_interpolation()
-
 
     def compute_interpolation(self):
         """
         Compute interoplation function for reconstruction.
         If possible (monotonic table), compute reverse interpolation function.
         """
-        self.check_monotonic()
-
         if self.get_reconstruction_method() == "INTERPOLATION":
             self.ifunc = interpolate.interp1d(self.x_raw, self.y_raw,
                                               kind=self.get_interpol_kind(),
@@ -178,29 +193,57 @@ class Xcalibu:
             else:
                 self.ifuncR = None
 
-
     def check_monotonic(self):
         """
-        Check if loaded TABLE calibration is monotonic.
+        Check if calibration is monotonic.
         ie: y_raw values are strictly increasing or strictly decreasing.
         set 'is_monotonic' boolean.
         """
-        print(self.y_raw)
-        y_diff = numpy.diff(self.y_raw)
-        print(y_diff)
 
-        if numpy.all(y_diff > 0):
-            self.is_monotonic = True
-            self.is_increasing = True
-            print("calib is MONOTONIC INCREASING")
-        elif numpy.all(y_diff < 0):
-            self.is_monotonic = True
-            self.is_increasing = False
-            print("calib is MONOTONIC DECREASING")
-        else:
-            self.is_monotonic = False
-            self.is_increasing = None
-            print("calib is NOT monotonic")
+        if self.get_calib_type() == "TABLE":
+            # print(self.y_raw)
+            y_diff = numpy.diff(self.y_raw)
+            # print(y_diff)
+
+            if numpy.all(y_diff > 0):
+                self.is_monotonic = True
+                self.is_increasing = True
+                print("calib is MONOTONIC INCREASING")
+            elif numpy.all(y_diff < 0):
+                self.is_monotonic = True
+                self.is_increasing = False
+                print("calib is MONOTONIC DECREASING")
+            else:
+                self.is_monotonic = False
+                self.is_increasing = None
+                print("calib is NOT monotonic")
+
+        if self.get_calib_type() == "POLY":
+            log.info(f"check if poly is monotonic on {self.Xmin} {self.Xmax}")
+
+            # Calculate the derivative polynom.
+            # print("poly = ", self._polynomial)
+            self._poly_deriv = self._polynomial.deriv()
+            log.debug(f"derivative poly = {self._poly_deriv.__str__()}")
+
+            # All roots including imaginary ones.
+            roots = self._poly_deriv.roots()
+            log.debug("Roots of the derivative polynom:")
+            log.debug(roots)
+
+            # Real roots only
+            real_roots = roots.real[abs(roots.imag) < 1e-6]
+            # print("Real Roots = ", real_roots)
+
+            # Real roots in limits only
+            real_valid_roots = [x for x in real_roots if x > self.Xmin and x < self.Xmax]
+
+            # real_valid_roots
+            if len(real_valid_roots) == 0:
+                self.monotonic = True
+            else:
+                print(f"This poly in not monotonic on [{self.Xmin};"
+                      f"{self.Xmax}] (real root(s) of the derivative: {real_valid_roots})")
 
     def set_calib_file_name(self, fn):
         """
@@ -251,14 +294,12 @@ class Xcalibu:
 
         print(f"calib type set to: \"{self.get_calib_type()}\"")
 
-
     def get_calib_type(self):
         """
         Return calibration type read from calibration file or string (field : CALIB_TYPE).
         Can be 'TABLE' or 'POLY'.
         """
         return self._calib_type
-
 
     def set_fit_order(self, order):
         """
@@ -313,7 +354,7 @@ class Xcalibu:
                      https://www.tutorialspoint.com/scipy/scipy_interpolate.htm
                      ex: 'linear', 'quadratic', 'cubic'
         """
-        self._interpol_kind = value
+        self._interpol_kind = value.lower()
         print(f"interpol_kind set to: \"{self.get_interpol_kind()}\"")
 
     def get_interpol_kind(self):
@@ -466,7 +507,7 @@ class Xcalibu:
                         self.set_calib_time(int(_value.split(".")[0]))
                     elif _info == "ORDER":
                         self.set_calib_order(int(_value))
-                        self.coeffs = numpy.linspace(0, 0, self.get_calib_order() + 1)
+                        self._poly_coeffs = numpy.zeros(self.get_calib_order() + 1)
                     elif _info == "XMIN":
                         self.Xmin = float(_value)
                     elif _info == "XMAX":
@@ -483,17 +524,19 @@ class Xcalibu:
                 else:
                     """
                     Read DATA line.
+                    NdP: https://regex101.com/  :)
                     """
                     if self.get_calib_type() == "TABLE":
 
                         # Match lines like: 13.123000  (1 column format)
                         matchPoint = re.search(
-                            r"([+-]?\d+\.?\d*[eE]?[+-]*\d*)$",
+                            r"^([+-]?\d+\.?\d*[eE]?[+-]*\d*)$",
                             line,
                         )
 
                         if matchPoint:
-                            log.debug("matched 1 col")
+                            log.debug("matched ONE_COL")
+                            self._calib_file_format = "ONE_COL"
                         else:
                             # Match lines like: 13.000000 15.941000 (2 columns format)
                             # ()      : save recognized group pattern
@@ -502,15 +545,16 @@ class Xcalibu:
                             # (?: re) : Groups regular expressions without remembering matched text.
                             # \s      : Whitespace, equivalent to [\t\n\r\f].
                             matchPoint = re.search(
-                                r"([+-]?\d+\.?\d*[eE]?[+-]*\d*)(?:\s+)([+-]?\d+\.?\d*[eE]?[+-]*\d*)$",
+                                r"^([+-]?\d+\.?\d*[eE]?[+-]*\d*)(?:\s+)([+-]?\d+\.?\d*[eE]?[+-]*\d*)$",
                                 line,
                             )
 
                             if matchPoint:
-                                log.debug("matched 2 cols")
+                                log.debug("matched TWO_COLS")
+                                self._calib_file_format = "TWO_COLS"
                             else:
 
-                                # Match lines like:  U35M [13.000000] = 15.941000 (legacy format)
+                                # Match lines like:  U35M [13.000000] = 15.941000 (XCALIBU format)
                                 # name of the calib (U35M) must be known.
                                 if self.get_calib_name() is None:
                                     raise XCalibError(
@@ -529,8 +573,8 @@ class Xcalibu:
                                         line,
                                     )
                                     if matchPoint:
-                                        log.debug("matched legacy")
-                                        self._calib_file_format = "LEGACY"
+                                        log.debug("matched XCALIBU")
+                                        self._calib_file_format = "XCALIBU"
 
                         if matchPoint:
                             # At least one line of the calib DATA has been read
@@ -538,14 +582,12 @@ class Xcalibu:
                             # -> no more in header.
                             _part_letter = "D"
 
-
                             try:
                                 _xval = float(matchPoint.group(1))
                                 _yval = float(matchPoint.group(2))
                             except:
                                 _xval = _data_line_nb
                                 _yval = float(matchPoint.group(1))
-
 
                             log.debug(
                                 "line %4d%s : raw calib  : %30s   xval=%8g yval=%8g"
@@ -597,7 +639,7 @@ class Xcalibu:
 
                             _pos = self.get_calib_order() - _coef
                             # print( "_pos=", _pos)
-                            self.coeffs[_pos] = _value
+                            self._poly_coeffs[_pos] = _value
 
                     else:
                         raise XCalibError(
@@ -643,25 +685,17 @@ class Xcalibu:
         self.x_raw = numpy.array(_xvalues)
         self.y_raw = numpy.array(_yvalues)
 
-        log.debug("Raw X data : %s" % ", ".join(list(map(str, self.x_raw))))
-        log.debug("Raw Y data : %s" % ", ".join(list(map(str, self.y_raw))))
+        log.info("Raw X data : %s" % ", ".join(list(map(str, self.x_raw))))
+        log.info("Raw Y data : %s" % ", ".join(list(map(str, self.y_raw))))
 
-        if (
-            self.get_calib_type() == "TABLE"
-            and self.get_reconstruction_method() == "POLYFIT"
-        ):
-            # Fit data if needed.
-            # log.info("get_calib_type=\"%s\" get_reconstruction_method=\"%s\" " %
-            #         (self.get_calib_type(), self.get_reconstruction_method()))
-            self.fit()
-        elif (
-            self.get_calib_type() == "TABLE"
-            and self.get_reconstruction_method() == "INTERPOLATION"
-        ):
-            log.info("TABLE + INTERPOLATION => NO FIT")
+        if self.get_calib_type() == "TABLE":
+            if self.get_reconstruction_method() == "POLYFIT":
+                self.fit()
+
+            if self.get_reconstruction_method() == "INTERPOLATION":
+                log.info("TABLE + INTERPOLATION => NO FIT")
+
         elif self.get_calib_type() == "POLY":
-            log.info("POLY => NO FIT")
-
             # Set Y range.
             self.Ymin = self.get_y(self.Xmin)
             self.Ymax = self.get_y(self.Xmax)
@@ -669,17 +703,31 @@ class Xcalibu:
     def set_coeffs(self, coeffs):
         """
         Set coefficients of a POLY calib
-        <coeffs>: list: [CN, .. C1, C0]
+        <coeffs>: list: [C0, C1, .. ,CN] in order of increasing degree (numpy Polynomial rule)
+        ex: []  --->   -8.0 - 6.0·x¹ + 3.0·x² + 1.0·x³
+
+        + Create Polynomial
         """
-        self.coeffs = coeffs
+        self._poly_coeffs = coeffs.copy()
         self.set_calib_order(len(coeffs) - 1)
+
+        self._polynomial = Polynomial(self._poly_coeffs)
+
+    def get_coeffs(self, order=None):
+        """
+        Return coeffs of a POLY table.
+        if <order> is specified, return the corresponding coefficient.
+        """
+        if order is not None:
+            return self._poly_coeffs[order]
+        else:
+            return self._poly_coeffs
 
     def set_x_limits(self, xmin, xmax):
         """
         """
         self.Xmin = xmin
         self.Xmax = xmax
-
 
     def fit(self):
         """
@@ -697,19 +745,30 @@ class Xcalibu:
             return
 
         _order = self.get_fit_order()
-        self.coeffs = None
+        self._poly_coeffs = numpy.zeros(_order + 1)
         self.coeffR = None
 
         _time0 = time.time()
 
         # Fit direct conversion.
         try:
-            self.coeffs = numpy.polyfit(self.x_raw, self.y_raw, _order)
+            # Numpy polyfit
+            # self._poly_coeffs = list(numpy.polyfit(self.x_raw, self.y_raw, _order))
+            # self._poly_coeffs.reverse()   # polyfit return coeffs in descending order.
+            # print("NUMPY POLYFIT=", self._poly_coeffs)
+
+            # Calculate Numpy Polynomial and fit coeffs.
+            self._polynomial = numpy.polynomial.polynomial.Polynomial.fit(
+                self.x_raw,
+                self.y_raw,
+                _order,
+                window=[self.Xmin, self.Xmax]
+                )
+            print("Polynomial  =", self._polynomial)
+            self._poly_coeffs = list(self._polynomial.coef)
+
         except numpy.RankWarning:
             print("[xcalibu.py] not enough data")
-
-        log.info("polynom coeffs = ")
-        self.coeffs
 
         self.x_fitted = numpy.linspace(self.Xmin, self.Xmax, 50)
         self.y_fitted = numpy.linspace(-100, 100, 50)
@@ -734,9 +793,7 @@ class Xcalibu:
         """
         x : float or numpy array of floats
 
-        Return the Y value(s) for given X value(s) calculated using the polynom
-        coefficients stored in self.coeffs
-        self.coeffs : [ ]
+        Return the Y value(s) for given X value(s) calculated using the polynom coefficients.
         Used for POLY and TABLE (once fitted) calibrations.
         """
         y = 0
@@ -748,7 +805,7 @@ class Xcalibu:
             print("[xcalibu.py] calc_poly_value : ERROR in calib type")
 
         for ii in range(_order + 1):
-            y = y + self.coeffs[_order - ii] * pow(x, ii)
+            y = y + self._poly_coeffs[ii] * pow(x, ii)
 
         return y
 
@@ -772,8 +829,6 @@ class Xcalibu:
             x = x + self.coeffR[_order - ii] * pow(y, ii)
 
         return x
-
-
 
     def calc_interpolated_value(self, x):
         """
@@ -830,7 +885,7 @@ class Xcalibu:
             _xxx = self.get_raw_x()
             _yyy = self.get_raw_y()
 
-            if self._calib_file_format == "LEGACY":
+            if self._calib_file_format == "XCALIBU":
                 for ii in range(_xxx.size):
                     _sf.write("%s[%f] = %f\n" % (_calib_name, _xxx[ii], _yyy[ii]))
             else:
@@ -843,7 +898,7 @@ class Xcalibu:
             _sf.write("CALIB_ORDER=%d\n" % self.get_calib_order())
 
             for ii in range(self.get_calib_order() + 1):
-                _sf.write("C%d = %f\n" % (ii, self.coeffs[self.get_calib_order() - ii]))
+                _sf.write("C%d = %f\n" % (ii, self._poly_coeffs[ii]))
         else:
             print("[xcalibu.py] ERROR")
 
@@ -863,13 +918,13 @@ class Xcalibu:
             self.x_calc = numpy.linspace(self.Xmin, self.Xmax, 50)
             self.y_calc = self.get_y_array(self.x_calc)
 
-            print("x_calc=", self.x_calc)
-            print("y_calc=", self.y_calc)
-            print("calib order=", self.get_calib_order())
+            # print("x_calc=", self.x_calc)
+            # print("y_calc=", self.y_calc)
+            # print("calib order=", self.get_calib_order())
             plt.plot(self.x_calc, self.y_calc, "--")
 
-            plt.legend( [ "raw data(%s) calib order= %s " % (self.get_calib_name(), self.get_calib_order()), ],
-                        loc="best", )
+            plt.legend(["raw data(%s) calib order= %s " % (self.get_calib_name(), self.get_calib_order()), ],
+                       loc="best", )
 
             plt.show()
 
@@ -879,8 +934,8 @@ class Xcalibu:
 
             if _rec_method == "POLYFIT":
                 plt.plot(self.x_raw, self.y_raw, "o", self.x_fitted, self.y_fitted, "4")
-                plt.legend( [ "raw data(%s)" % self.get_calib_name(),
-                              "fit(order=%s)" % self.get_fit_order(), ], loc="best", )
+                plt.legend(["raw data(%s)" % self.get_calib_name(),
+                            "fit(order=%s)" % self.get_fit_order(), ], loc="best", )
                 plt.show()
             elif _rec_method == "INTERPOLATION":
                 plt.plot(self.x_raw, self.y_raw, "o", label="data", linestyle="-")
@@ -890,7 +945,7 @@ class Xcalibu:
                 #    x_rawR =
                 #    y_rawR =
 
-                plt.legend( [ "INTERPOLATION raw data(%s)" % self.get_calib_name(), ], loc="best", )
+                plt.legend(["INTERPOLATION raw data(%s)" % self.get_calib_name(), ], loc="best", )
                 plt.show()
             else:
                 log.error("plot : Unknown method : %s" % _rec_method)
@@ -1127,161 +1182,183 @@ def demo(do_plot):
     Create various demo calibrations.
     """
 
-    log.info("===== use: demo_calib_string str ; POLYFIT ; fit_order = 2 ===================\n")
-    myCalibString = Xcalibu(
-        calib_string=demo_calib_string, fit_order=2, reconstruction_method="POLYFIT"
-    )
-    log.info("TEST -         demo_calib_string(%f) = %f" % (5, myCalibString.get_y(5)))
-    log.info("TEST - inverse_demo_calib_string(%f) = %f" % (4, myCalibString.get_x(4)))
+#    log.info("===== use: demo_calib_string str ; POLYFIT ; fit_order = 2 ===================\n")
+#    myCalibString = Xcalibu(
+#        calib_string=demo_calib_string, fit_order=2, reconstruction_method="POLYFIT"
+#    )
+#    log.info("TEST -         demo_calib_string(%f) = %f" % (5, myCalibString.get_y(5)))
+#    log.info("TEST - inverse_demo_calib_string(%f) = %f" % (4, myCalibString.get_x(4)))
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    log.info("============= POLY calibration from file ========================\n")
+#    myCalibPoly = Xcalibu(calib_file_name=XCALIBU_DIRBASE + "/examples/poly.calib")
+#    log.info("xcalibu - TEST - Gap for %f keV : %f" % (5, myCalibPoly.get_y(5)))
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    log.info(
+#        "====== U32BC1G: undu gap TABLE calibration from file with POLYFIT reconstruction method ====\n"
+#    )
+#    myCalib2 = Xcalibu(
+#        calib_file_name=XCALIBU_DIRBASE + "/examples/undu_table.calib",
+#        fit_order=2,
+#        reconstruction_method="POLYFIT",
+#    )
+#    log.info("TEST - Gap for %f keV : %f" % (5, myCalib2.get_y(5)))
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    log.info(
+#        "===== myCalib3: undu TABLE calibration from file with INTERPOLATION rec. method ======\n"
+#    )
+#    myCalib3 = Xcalibu(
+#        calib_file_name=XCALIBU_DIRBASE + "/examples/table.calib",
+#        fit_order=2,
+#        reconstruction_method="INTERPOLATION",
+#    )
+#    log.info("TEST - Gap for %f keV : %f" % (1, myCalib3.get_y(1)))
+#    log.info("TEST - Gap for %f keV : %f" % (2, myCalib3.get_y(2)))
+#    log.info("TEST - Gap for %f keV : %f" % (4, myCalib3.get_y(4)))
+#    log.info("TEST - Gap for %f keV : %f" % (9, myCalib3.get_y(9)))
+#    # errors :
+#    #    log.info("TEST - Gap for %f keV : %f" % (0.5, myCalib3.get_y(0.5)))
+#    #    log.info("TEST - Gap for %f keV : %f" % (12, myCalib3.get_y(12)))
+#    #  myCalib3.get_x(42)
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    myCalibCubic = Xcalibu(
+#        calib_file_name=XCALIBU_DIRBASE + "/examples/cubic.calib",
+#        fit_order=3,
+#        reconstruction_method="POLYFIT",
+#    )
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    myCalibRingTz = Xcalibu(
+#        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Tz.calib",
+#        fit_order=20,
+#        reconstruction_method="POLYFIT",
+#    )
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    myCalibRingRx = Xcalibu(
+#        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Rx.calib",
+#        fit_order=5,
+#        reconstruction_method="POLYFIT",
+#    )
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    myCalibRingRy = Xcalibu(
+#        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Ry.calib",
+#        fit_order=5,
+#        reconstruction_method="POLYFIT",
+#    )
+#    print("saving table demo....")
+#    myCalibRingRy.set_calib_file_name("ttt.calib")
+#    myCalibRingRy.save()
+#
+#    print("---------------------------------------------------------------------------")
+#    print("---------------------------------------------------------------------------")
+#
+#    print("Example : creation of an empty TABLE calib then populate it with in-memory data")
+#    myDynamicCalib = Xcalibu()
+#    myDynamicCalib.set_calib_file_name("ddd.calib")
+#    myDynamicCalib.set_calib_name("DynCalTable")
+#    myDynamicCalib.set_calib_type("TABLE")
+#    myDynamicCalib.set_calib_time("1234.5678")
+#    myDynamicCalib.set_calib_description("dynamic calibration created for demo")
+#    myDynamicCalib.set_raw_x(numpy.linspace(1, 10, 10))
+#    myDynamicCalib.set_raw_y(numpy.array([3, 6, 5, 4, 2, 5, 7, 3, 7, 4]))
+#    myDynamicCalib.set_reconstruction_method("INTERPOLATION", "linear")
+#    myDynamicCalib.compute_interpolation()
+#    myDynamicCalib.save()
+#    print("myDynamicCalib.get_y(2.3)=%f" % myDynamicCalib.get_y(2.3))
 
     print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
+    print("------------------------------- PolyB -------------------------------------")
 
-    log.info("============= POLY calibration from file ========================\n")
-    myCalibPoly = Xcalibu(calib_file_name=XCALIBU_DIRBASE + "/examples/poly.calib")
-    log.info("xcalibu - TEST - Gap for %f keV : %f" % (5, myCalibPoly.get_y(5)))
+#    coeffsB = [0, -0.0004, 0.0223, -0.2574, 1.4143, 1.0227]
+#    coeffsB = [1, 0, 0]  # cst  x  x2
 
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
+    coeffsB = [-8, -6, 3, 1]  # cst  x  x2 x3   ===>   -8.0 - 6.0·x¹ + 3.0·x² + 1.0·x³
 
-    log.info(
-        "====== U32BC1G: undu gap TABLE calibration from file with POLYFIT reconstruction method ====\n"
-    )
-    myCalib2 = Xcalibu(
-        calib_file_name=XCALIBU_DIRBASE + "/examples/undu_table.calib",
-        fit_order=2,
-        reconstruction_method="POLYFIT",
-    )
-    log.info("TEST - Gap for %f keV : %f" % (5, myCalib2.get_y(5)))
+    # u32a
+    coeffsB = [1500.46611131, -1346.88761616, 499.06810627, -97.02312684, 10.45705476, -0.59283464, 0.01382656]
 
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
-
-    log.info(
-        "===== myCalib3: undu TABLE calibration from file with INTERPOLATION rec. method ======\n"
-    )
-    myCalib3 = Xcalibu(
-        calib_file_name=XCALIBU_DIRBASE + "/examples/table.calib",
-        fit_order=2,
-        reconstruction_method="INTERPOLATION",
-    )
-    log.info("TEST - Gap for %f keV : %f" % (1, myCalib3.get_y(1)))
-    log.info("TEST - Gap for %f keV : %f" % (2, myCalib3.get_y(2)))
-    log.info("TEST - Gap for %f keV : %f" % (4, myCalib3.get_y(4)))
-    log.info("TEST - Gap for %f keV : %f" % (9, myCalib3.get_y(9)))
-    # errors :
-#    log.info("TEST - Gap for %f keV : %f" % (0.5, myCalib3.get_y(0.5)))
-#    log.info("TEST - Gap for %f keV : %f" % (12, myCalib3.get_y(12)))
-    #  myCalib3.get_x(42)
-
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
-
-    myCalibCubic = Xcalibu(
-        calib_file_name=XCALIBU_DIRBASE + "/examples/cubic.calib",
-        fit_order=3,
-        reconstruction_method="POLYFIT",
-    )
-    # print(dir(myCalibCubic))
-    # print(myCalibCubic.coeffs)
-
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
-
-    myCalibRingTz = Xcalibu(
-        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Tz.calib",
-        fit_order=20,
-        reconstruction_method="POLYFIT",
-    )
-
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
-
-    myCalibRingRx = Xcalibu(
-        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Rx.calib",
-        fit_order=5,
-        reconstruction_method="POLYFIT",
-    )
-
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
-
-    myCalibRingRy = Xcalibu(
-        calib_file_name=XCALIBU_DIRBASE + "/examples/hpz_ring_Ry.calib",
-        fit_order=5,
-        reconstruction_method="POLYFIT",
-    )
-    print("saving table demo....")
-    myCalibRingRy.set_calib_file_name("ttt.calib")
-    myCalibRingRy.save()
-
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
-
-    print("Example : creation of an empty TABLE calib then populate it with in-memory data")
-    myDynamicCalib = Xcalibu()
-    myDynamicCalib.set_calib_file_name("ddd.calib")
-    myDynamicCalib.set_calib_name("DynCalTable")
-    myDynamicCalib.set_calib_type("TABLE")
-    myDynamicCalib.set_calib_time("1234.5678")
-    myDynamicCalib.set_calib_description("dynamic calibration created for demo")
-    myDynamicCalib.set_raw_x(numpy.linspace(1, 10, 10))
-    myDynamicCalib.set_raw_y(numpy.array([3, 6, 5, 4, 2, 5, 7, 3, 7, 4]))
-    myDynamicCalib.set_reconstruction_method("INTERPOLATION", "linear")
-    myDynamicCalib.compute_interpolation()
-    myDynamicCalib.save()
-    print("myDynamicCalib.get_y(2.3)=%f" % myDynamicCalib.get_y(2.3))
-
-
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
-
-    myCalibPolyB = Xcalibu(name="PolyB", description="Polynom calib deg=? for PolyB")
+    myCalibPolyB = Xcalibu(calib_name="PolyB", description="Polynom calib deg=? for PolyB")
     myCalibPolyB.set_calib_type("POLY")
     myCalibPolyB.set_coeffs(coeffsB)
-    myCalibPolyB.set_x_limits(-15,25)
+    # myCalibPolyB.set_x_limits(-15, 25)  # For POLY, limits are used for plot.
+    myCalibPolyB.set_x_limits(-8, 38)  # no more increasing after ~33.
+    myCalibPolyB.set_x_limits(5, 10)
+    myCalibPolyB.check_monotonic()
+
+#    assert numpy.isclose(myCalibPolyB.get_y(0), 1.0227)
+#    assert numpy.isclose(myCalibPolyB.get_y(-10), -65.1603)
+#    assert numpy.isclose(myCalibPolyB.get_y(22), 51.3037)
+    print(f"f(0)={myCalibPolyB.get_y(0)}", end="    ")
+    print(f"f(-10)={myCalibPolyB.get_y(-10)}", end="   ")
+    print(f"f(22)={myCalibPolyB.get_y(22)}")
+
+    print(f"f(-4)={myCalibPolyB.get_y(-4)}")
+    print(f"f(-1)={myCalibPolyB.get_y(-1)}")
+    print(f"f(2)={myCalibPolyB.get_y(2)}")
 
     print("---------------------------------------------------------------------------")
     print("---------------------------------------------------------------------------")
-
 
     """
-    U32a_1_table.dat has 59 lines and looks like:
-        #E      u32a
-        6.501   16.9712
-        6.566   17.0675
+    U32a_1_table.dat looks like:
+        #E    u32a
+        4.500 13.089
+        4.662 13.410
+        4.823 13.727
         ...
-        10.345  33.3075
-        10.413  34.6306
+        10.444 34.814
+        10.500 36.708
+        10.675 41.711
     """
-    myCalibU32a = Xcalibu(name="U32ATABLE",
+    myCalibU32a = Xcalibu(calib_name="U32ATABLE", calib_type="TABLE",
                           calib_file_name=XCALIBU_DIRBASE + "/examples/U32a_1_table.dat",
-                          description="59-values table calib of U32A undulator")
-#    myCalibU32a.set_reconstruction_method("INTERPOLATION", kind="cubic")
+                          description="2cols table calib of U32A undulator")
+    # myCalibU32a.set_reconstruction_method("INTERPOLATION", kind="cubic")
     myCalibU32a.set_reconstruction_method("INTERPOLATION", kind="quadratic")
+    myCalibPolyB.check_monotonic()
     myCalibU32a.compute_interpolation()
 
-    print("get_x(get_y(7))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7))))
+#    print("get_x(get_y(7))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7))))
     # quadratic -> 7.0000295
     #     cubic -> 6.9997924
 
-    print("get_x(get_y(7.04))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7.04))))
+#    print("get_x(get_y(7.04))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7.04))))
     # quadratic -> 7.04
     #     cubic -> 7.039999
 
-
-
-
     if do_plot:
-        myCalib2.plot()         # U32BC1G fit_order=2  ~5..10 -> 15..33
-        myCalib3.plot()         # B52 (crazy lines)     ~0..50->-10..70
-        myDynamicCalib.plot()   #  DynCalTable  1..10-> 2..7
-        myCalibCubic.plot()     # CUBIC1
-        myCalibRingTz.plot()    # HPZ_RING_TZ (oscillations) fit_order=20
-        myCalibRingRx.plot()    # HPZ_RING_RX  (sin)
-        myCalibRingRy.plot()    # HPZ_RING_RY
+        #myCalibString.plot()    # demo string calibration
+        #myCalibPoly.plot()      # order 2 poly
+        #myCalib2.plot()         # U32BC1G fit_order=2  ~5..10 -> 15..33
+        #myCalib3.plot()         # B52 (crazy lines)     ~0..50->-10..70
+        #myDynamicCalib.plot()   # DynCalTable  1..10-> 2..7
+        #myCalibCubic.plot()     # CUBIC1
+        #myCalibRingTz.plot()    # HPZ_RING_TZ (oscillations) fit_order=20
+        #myCalibRingRx.plot()    # HPZ_RING_RX  (sin)
+        #myCalibRingRy.plot()    # HPZ_RING_RY
         myCalibPolyB.plot()     # PolyB
-        myCalibU32a.plot()
+        #myCalibPolyD.plot()     # PolyD
+        myCalibU32a.plot()      # 59 points TWO_COLS table
+
 
 def main():
     """
@@ -1290,7 +1367,6 @@ def main():
 
     print("")
     print("--------------------------------{ Xcalibu }----------------------------------")
-
 
     """
     arguments parsing
@@ -1349,7 +1425,7 @@ def main():
         dest="kind_interpol",
         type="string",
         default="linear",
-        help="Kind of interpolation: LINEAR, CUBIC, QUADRATIC etc...",
+        help="Kind of interpolation: linear, cubic, quadratic etc...",
     )
 
     parser.add_option(
@@ -1360,8 +1436,6 @@ def main():
         default=3,
         help="Fit order for data fitting",
     )
-
-
 
     # Gathers options and arguments.
     (options, args) = parser.parse_args()
@@ -1415,10 +1489,10 @@ def main():
             print(" fit_order=", options.fit_order)
             print("--------------------------------------")
 
-            myCalib = Xcalibu(calib_name = options.name,
+            myCalib = Xcalibu(calib_name=options.name,
                               calib_file_name=args[0],
                               fit_order=options.fit_order,
-                              name = options.name,
+                              name=options.name,
                               reconstruction_method=options.reconstruction_method,
                               interpol_kind=options.kind_interpol,
                               )
@@ -1461,12 +1535,8 @@ def main():
                 myCalib.plot()
 
 
-
 # Some data for demo
-
 coeffs_U35A = [0.005827806, -0.2468173, 4.322111, -40.01252, 206.4701, -561.212, 638.7663]
-
-coeffsB = [0, -0.0004, 0.0223, -0.2574, 1.4143, 1.0227]
 
 demo_calib_string = """
 # TEST calibration

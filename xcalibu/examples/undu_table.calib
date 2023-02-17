@@ -3,6 +3,7 @@
 # Type TABLE
 # Harmonic 1
 # energy 5.0 keV -> 10.5 keV
+# fit at order 2 should give ~ Polynomial([19.23,  8.55,  4.24]
 
 CALIB_NAME = U32BC1G
 CALIB_TYPE = TABLE
