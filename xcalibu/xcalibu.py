@@ -4,34 +4,27 @@
 # xcalibu.py
 # Calibration Manager
 #
-# Xcalibu is a class to deal with calibrations.
-#
-# A calibration is :
-# * read from a file
-# * defined by a string
-# * created from numpy arrays
-# it stores information as a table or as a polynom.
-#
-#  example of field of a table in a file : U32BC1G[5.00]=14.05
+# Xcalibu is python code to deal with calibrations data:
+#  * load / save from file, string, list, numpy array
+#  * fit tables (using numpy)
+#  * interpolate (using scipy)
 #
 # The Xcalibu class mainly provides the following method :
 #   get_y(x) which returns the f(x) fitted value.
 #
-# If using TABLE, the class performs the fit of the raw data and
+# If using TABLE, the class can perform the fit of the raw data and
 # furnishes a y=f(x) polynomial function.
 #
 # The returned value is calculated by various reconstruction methods
 # depending on the calibration type and parameters.
 #   TABLE ----> INTERPOLATION   |  POLYFIT
-#   POLY  ----> Direct calculation
+#   POLY  ----> POLY (Direct calculation)
 #
 # The reverse function "get_x(y)" is also available.
 # Take care : get_x(get_y(x)) can be different from x due to
-# approximation of fitting.
-# get_x is usable only for poly and fitted tables
+# approximation.
 #
-# Intrinsec parameters of a calibration (parameters fixed at calib
-# recording/generation):
+# Meta-data of a calibration (fixed at calib recording/generation) are:
 # * CALIB_NAME
 # * CALIB_TYPE
 # * CALIB_TIME
@@ -933,7 +926,7 @@ class Xcalibu:
         logging.getLogger().setLevel("INFO")
         import matplotlib.pyplot as plt
         import matplotlib
-        print(f"matplotlib.__version__={matplotlib.__version__}")
+        print(f"matplotlib version {matplotlib.__version__}")
 
         if self.get_calib_type() == "POLY":
             log.info(f"Plotting POLY ; desc={self.get_calib_description()} ; name={self.get_calib_name()}")
@@ -1283,10 +1276,8 @@ def main():
         help="Fit order for data fitting",
     )
 
-    # Gathers options and arguments.
+    # Gather options and arguments.
     (options, args) = parser.parse_args()
-    # print(options)
-    # print(args)
 
     """
     Log level

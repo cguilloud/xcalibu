@@ -5,28 +5,54 @@
 Examples of calibrations for test and demo purposes.
 """
 
+import logging
+import os
 
-def demo_xcalibu(do_plot):
-    """
-    Create various demo calibrations.
-    """
+from xcalibu import Xcalibu
 
-    log.info("===== use: demo_calib_string str ; POLYFIT ; fit_order = 2 ===================\n")
+
+XCALIBU_DIRBASE = os.path.dirname(os.path.realpath(__file__))
+
+
+log = logging.getLogger("DEMO_XCALIBU")
+
+
+def demo_xcalibu_1(do_plot):
+    """
+    string calibration
+    """
+    log = logging.getLogger("XCALIBU")
+
+    # log.info("===== use: demo_calib_string str ; POLYFIT ; fit_order = 2 ===================\n")
     myCalibString = Xcalibu(
         calib_string=demo_calib_string, fit_order=2, reconstruction_method="POLYFIT"
     )
     log.info("TEST -         demo_calib_string(%f) = %f" % (5, myCalibString.get_y(5)))
     log.info("TEST - inverse_demo_calib_string(%f) = %f" % (4, myCalibString.get_x(4)))
 
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
+    if do_plot:
+        myCalibString.plot()
+
+
+def demo_xcalibu_2(do_plot):
+    """
+    ... calibration
+    """
+    log = logging.getLogger("XCALIBU")
 
     log.info("============= POLY calibration from file ========================\n")
     myCalibPoly = Xcalibu(calib_file_name=XCALIBU_DIRBASE + "/examples/poly.calib")
     log.info("xcalibu - TEST - Gap for %f keV : %f" % (5, myCalibPoly.get_y(5)))
 
-    print("---------------------------------------------------------------------------")
-    print("---------------------------------------------------------------------------")
+    if do_plot:
+        myCalibPoly.plot()
+
+
+def demo_xcalibu_3(do_plot):
+    """
+    TABLE calibration from file with POLYFIT reconstruction method
+    """
+    log = logging.getLogger("XCALIBU")
 
     log.info(
         "====== U32BC1G: undu gap TABLE calibration from file with POLYFIT reconstruction method ====\n"
@@ -40,6 +66,40 @@ def demo_xcalibu(do_plot):
 
     print("---------------------------------------------------------------------------")
     print("---------------------------------------------------------------------------")
+
+    if do_plot:
+        myCalib2.plot()
+
+
+'''
+def demo_xcalibu_(do_plot):
+    """
+    ... calibration
+    """
+    log = logging.getLogger("XCALIBU")
+
+
+    if do_plot:
+        .plot()
+'''
+
+'''
+def demo_xcalibu_(do_plot):
+    """
+    ... calibration
+    """
+    log = logging.getLogger("XCALIBU")
+
+
+    if do_plot:
+        .plot()
+'''
+
+
+def demo_xcalibu(do_plot):
+    """
+    Create various demo calibrations.
+    """
 
     log.info(
         "===== myCalib3: undu TABLE calibration from file with INTERPOLATION rec. method ======\n"
@@ -189,9 +249,6 @@ def demo_xcalibu(do_plot):
         myCalibU32a.plot()      # 59 points TWO_COLS table
 
 
-
-
-
 # Some data for demo
 coeffs_U35A = [0.005827806, -0.2468173, 4.322111, -40.01252, 206.4701, -561.212, 638.7663]
 
@@ -223,6 +280,67 @@ B52[27.401] = 0.72e2
 B52[32]=  62
 B52[0.5e2] = +0.53e2
 """
+
+
+def main():
+
+    """
+    arguments parsing
+    """
+    from optparse import OptionParser
+
+    parser = OptionParser("demo_xcalibu.py")
+    parser.add_option(
+        "-d",
+        "--debug",
+        type="string",
+        help="Available levels are :\n CRITICAL(50)\n \
+                      ERROR(40)\n WARNING(30)\n INFO(20)\n DEBUG(10)",
+        default="INFO",
+    )
+
+    parser.add_option(
+        "-p",
+        "--plot",
+        action="store_true",
+        dest="plot",
+        default=False,
+        help="Calibration plotting",
+    )
+
+    # Gather options and arguments.
+    (options, args) = parser.parse_args()
+    # print(options)
+    # print(args)
+
+    try:
+        loglevel = getattr(logging, options.debug.upper())
+    except AttributeError:
+        # print "AttributeError  o.d=",options.debug
+        loglevel = {
+            50: logging.CRITICAL,
+            40: logging.ERROR,
+            30: logging.WARNING,
+            20: logging.INFO,
+            10: logging.DEBUG,
+        }[int(options.debug)]
+
+    print(
+        "[xcalibu] - log level = %s (%d)" % (logging.getLevelName(loglevel), loglevel)
+    )
+
+    LOG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
+    logging.basicConfig(format=LOG_FORMAT, level=loglevel)
+
+    print("-------------- args ------------------------")
+    print(options)
+    print(" plot=", options.plot)
+    print("--------------------------------------")
+
+    demo_xcalibu_1(options.plot)
+    demo_xcalibu_2(options.plot)
+    demo_xcalibu_3(options.plot)
+
 
 if __name__ == "__main__":
     main()

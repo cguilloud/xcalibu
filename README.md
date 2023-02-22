@@ -1,6 +1,6 @@
 # Xcalibu
 
-author: Cyril Guilloud ESRF BCU 2013-2022
+author: Cyril Guilloud ESRF BCU 2013-2023
 
 Xcalibu is a python library to manage calibrations tables or polynomia.
 It includes a PyTango device server in order to optionaly run it as a server.
@@ -8,7 +8,7 @@ It includes a PyTango device server in order to optionaly run it as a server.
 xcalibu.py : python library
 Xcalibuds.py : PyTango device server
 
-Xcalibu name comes from the first use of this library to calibrate undulators at ESRF.
+Xcalibu name comes from the first use of this library to deal with undulators calibrations at ESRF.
 
 * https://en.wikipedia.org/wiki/Undulator
 * https://en.wikipedia.org/wiki/European_Synchrotron_Radiation_Facility
@@ -26,8 +26,10 @@ to debug:`./xcalibu.py -d10`
 plot a file:`./xcalibu.py -p examples/xcalibu_calib_poly.calib`
 
 
-```python
+## Examples
 
+### TABLE + INTERPOL
+```python
 import numpy
 import xcalibu
 calib = xcalibu.Xcalibu()
@@ -39,10 +41,36 @@ calib.set_calib_name("CAL")
 calib.set_calib_description("dynamic calibration created for demo")
 calib.set_raw_x(numpy.linspace(1, 10, 10))
 calib.set_raw_y(numpy.array([3, 6, 5, 4, 2, 5, 7, 3, 7, 4]))
-calib.save()
+calib.plot()
+calib.save()  # create a file named `mycalib.calib` in your current directory.
+```
+
+### TABLE + POLYFIT
+```python
+import numpy
+import xcalibu
+calib = xcalibu.Xcalibu()
+calib.set_calib_file_name("mycalib.calib")
+calib.set_calib_type("TABLE")
+calib.set_reconstruction_method("POLYFIT")
+calib.set_calib_time("1234.5678")
+calib.set_calib_name("CAL")
+calib.set_calib_description("dynamic calibration created for demo")
+calib.set_raw_x(numpy.linspace(1, 10, 15))
+calib.set_raw_y(numpy.array([4.1, 3.5, 3.6, 4.2, 4.5, 4, 3.9, 3.8, 4.5, 4.6, 6, 6.2, 4.7, 5, 4]))
+calib.set_fit_order(6)
+calib.fit()
+calib.plot()
+```
+
+
+### POLY
+```python
 
 ```
-This will create a file named `mycalib.calib` in your current directory.
+
+
+
 
 ```
 % cat mycalib.calib
@@ -65,29 +93,6 @@ CAL[9.000000] = 7.000000
 CAL[10.000000] = 4.000000
 ```
 
-That you can now use and plot for example:
-
-
-```
-% xcalibu ./mycalib.calib  -p
-
-------------------------{ Xcalibu }----------------------------------
-[xcalibu] - log level = INFO (20)
-use "./mycalib.calib" argument as calib test file
-XCALIBU - INFO - DATA lines read : 10
-XCALIBU - INFO -  Ymin =          2  Ymax =          7  Nb points =   10
-XCALIBU - INFO -  Xmin =          1  Xmax =         10  Nb points =   10
-XCALIBU - INFO - TABLE + INTERPOLATION => NO FIT
-XCALIBU - INFO - y value of 5.5 = 3.5 (3.361701965332031e-05)
-XCALIBU - INFO - Calculation of 25 values of y. duration : 0.00021958351135253906
-XCALIBU - INFO - Plotting
-
-%
-
-```
-
-
-
 ## command line usage
 
 Options:
@@ -100,5 +105,9 @@ Options:
   -r reconstruction_method
   -k kind of interpolation
   -n name
-  
-  
+
+example:
+  ./xcalibu.py -n calinou -t TABLE -r INTERPOLATION -k cubic examples/U32a_1_table.dat -p
+
+
+
