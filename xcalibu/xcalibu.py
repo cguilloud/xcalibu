@@ -70,6 +70,9 @@ XCALIBU_DIRBASE = os.path.dirname(os.path.realpath(__file__))
 __all__ = ["Xcalibu", "XCalibError"]
 
 
+SAMPLING_NB_POINTS = 40
+
+
 class XCalibError(Exception):
     """Custom exception class for Xcalibu."""
 
@@ -160,7 +163,7 @@ class Xcalibu:
         if description is not None:
             self.set_calib_description(description)
 
-        # Load !
+        # Load if data are available.
         if (
             self.get_calib_file_name() is not None
             or self.get_calib_string() is not None
@@ -172,19 +175,36 @@ class Xcalibu:
 
     def compute_interpolation(self):
         """
-        Compute interoplation function for reconstruction.
-        If possible (monotonic table), compute reverse interpolation function.
+        Compute interoplation function if reconstruction method is INTERPOLATION.
+        If possible (ie: monotonic on interval), compute reverse interpolation function.
         """
+
         if self.get_reconstruction_method() == "INTERPOLATION":
+            log.info("compute_interpolation()")
+
+            # raw data arrays must be filled for POLY.
+            if self.get_calib_type() == "POLY":
+                self.x_raw = numpy.linspace(self.Xmin, self.Xmax, SAMPLING_NB_POINTS)
+                self.y_raw = self.calc_poly_value(self.x_raw)
+
+            print("========================================")
+            print(self.x_raw)
+            print(self.y_raw)
+            print(self.get_interpol_kind())
+            print("========================================")
             self.ifunc = interpolate.interp1d(self.x_raw, self.y_raw,
                                               kind=self.get_interpol_kind(),
-                                              bounds_error=False, fill_value=666.666)
+                                              bounds_error=False, fill_value=999.999)
             if self.is_monotonic:
+                log.info("compute_interpolation() reverse")
+
                 self.ifuncR = interpolate.interp1d(self.y_raw, self.x_raw,
                                                    kind=self.get_interpol_kind(),
                                                    bounds_error=False, fill_value=666.666)
             else:
                 self.ifuncR = None
+        else:
+            log.info(f"cannot compute_interpolation() (rec method = {self.get_reconstruction_method()}")
 
     def check_monotonic(self):
         """
@@ -233,9 +253,11 @@ class Xcalibu:
 
             # real_valid_roots
             if len(real_valid_roots) == 0:
-                self.monotonic = True
+                self.is_monotonic = True
+                log.info(f"This poly is monotonic on [{self.Xmin};{self.Xmax}] ")
             else:
-                print(f"This poly in not monotonic on [{self.Xmin};"
+                self.is_monotonic = False
+                log.info(f"This poly is not monotonic on [{self.Xmin};"
                       f"{self.Xmax}] (real root(s) of the derivative: {real_valid_roots})")
 
     def set_calib_file_name(self, fn):
@@ -281,7 +303,7 @@ class Xcalibu:
             self._calib_type = value
         elif value == "POLY":
             self._calib_type = value
-            self.set_reconstruction_method("POLY")
+            # self.set_reconstruction_method("POLY")
         else:
             raise ValueError(f"wrong calib type: {value}")
 
@@ -633,7 +655,7 @@ class Xcalibu:
                             )
 
                             # Fill temporary dict.
-                            print(f"------ _coeff={_coeff}  _value={_value}")
+                            log.debug(f"------ _coeff={_coeff}  _value={_value}")
                             _coeffs_dict[_coeff] = _value
 
                     else:
@@ -760,9 +782,11 @@ class Xcalibu:
 
         _order = self.get_fit_order()
         self._poly_coeffs = numpy.zeros(_order + 1)
+
+        # ??
         self.coeffR = None
 
-        _time0 = time.time()
+        _time0 = time.perf_counter()
 
         # Fit direct conversion.
         try:
@@ -788,7 +812,7 @@ class Xcalibu:
         self.y_fitted = numpy.linspace(-100, 100, 50)
         self.y_fitted = list(map(self.calc_poly_value, self.x_fitted))
 
-        # Fit reciprocal conversion.
+        # Fit reciprocal conversion ???
         self.coeffR = numpy.polyfit(self.y_raw, self.x_raw, _order)
 
         self.x_fittedR = numpy.linspace(self.Ymin, self.Ymax, 50)
@@ -796,7 +820,7 @@ class Xcalibu:
         self.y_fittedR = list(map(self.calc_reverse_value, self.x_fittedR))
 
         # Fit duration display.
-        _fit_duration = time.time() - _time0
+        _fit_duration = time.perf_counter() - _time0
 
         if TIME_DISPLAY_FOUND:
             log.info("Fitting tooks %s" % timedisplay.duration_format(_fit_duration))
@@ -825,24 +849,34 @@ class Xcalibu:
 
     def calc_reverse_value(self, y):
         """
-        Calculate reverse value using reverse fit.
+        Calculate reverse value if possible (ie: monotonic)
+
+        TABLE: use reverse interpolation function (ifuncR)
+        POLY: use reverse poly  or reverse interpolation function
+
         """
         x = 0
 
         if self.get_calib_type() == "POLY":
-            _order = self.get_calib_order()
+            if self.get_reconstruction_method() == "INTERPOLATION" and self.is_monotonic:
+                return self.ifuncR(y)
+            else:
+                _order = self.get_calib_order()
+                for ii in range(_order + 1):
+                    x = x + self.coeffR[_order - ii] * pow(y, ii)
+                return x
+
         elif self.get_calib_type() == "TABLE":
             if self.get_reconstruction_method() == "INTERPOLATION" and self.is_monotonic:
                 return self.ifuncR(y)
             else:
                 _order = self.get_fit_order()
+                for ii in range(_order + 1):
+                    x = x + self.coeffR[_order - ii] * pow(y, ii)
+                return x
+
         else:
             print("[xcalibu.py] calc_reverse_value : ERROR in calib type")
-
-        for ii in range(_order + 1):
-            x = x + self.coeffR[_order - ii] * pow(y, ii)
-
-        return x
 
     def calc_interpolated_value(self, x):
         """
@@ -929,24 +963,26 @@ class Xcalibu:
         print(f"matplotlib version {matplotlib.__version__}")
 
         if self.get_calib_type() == "POLY":
-            log.info(f"Plotting POLY ; desc={self.get_calib_description()} ; name={self.get_calib_name()}")
 
-            self.x_calc = numpy.linspace(self.Xmin, self.Xmax, 50)
+            log.info(f"Plotting POLY={self._polynomial} ; "
+                     f"desc={self.get_calib_description()} ; name={self.get_calib_name()}")
+
+            self.x_calc = numpy.linspace(self.Xmin, self.Xmax, SAMPLING_NB_POINTS)
             self.y_calc = self.get_y_array(self.x_calc)
 
             # print("x_calc=", self.x_calc)
             # print("y_calc=", self.y_calc)
             # print("calib order=", self.get_calib_order())
             fig, ax = plt.subplots()
-            poly = plt.plot(self.x_calc, self.y_calc, "--")
-            deriv = plt.plot(self.y_calc, self.x_calc, "--")
+            _ = plt.plot(self.x_calc, self.y_calc, "--")
+            _ = plt.plot(self.y_calc, self.x_calc, "--")
 
             ax.set_xlabel('my xdata')
             ax.set_ylabel('my ydata')
 
-            l1 = (f"raw data({self.get_calib_name()}) calib order={self.get_calib_order()} \n"
+            l1 = (f"POLY={self._polynomial} ({self.get_calib_name()})  \n"
                   f"desc={self.get_calib_description()}")
-            l2 = "derivative"
+            l2 = "reverse"
             ax.legend([l1, l2], loc="best")
             plt.show()
 
@@ -973,7 +1009,7 @@ class Xcalibu:
                 log.error("plot : Unknown method : %s" % _rec_method)
 
         else:
-            print("OH OH do not know this calib type :(" )
+            print("OH OH do not know this calib type :(")
 
     def print_table(self):
         for x, y in zip(self.x_raw, self.y_raw):
@@ -1092,7 +1128,6 @@ class Xcalibu:
     """
     Reciprocal calibration
     """
-
     def get_x(self, y):
         """
         y: int or float or numpy array of floats.
@@ -1308,7 +1343,10 @@ def main():
         )
         print("")
     else:
-        print('using "%s" argument as calib test file' % args[0])
+
+        file_name = args[0]
+
+        print("using '{file_name}' argument as calib test file")
         # load calibration from file.
 
         print("--------------args------------------------")
@@ -1320,13 +1358,18 @@ def main():
         print(" fit_order=", options.fit_order)
         print("--------------------------------------")
 
-        myCalib = Xcalibu(calib_name=options.name,
-                          calib_file_name=args[0],
-                          fit_order=options.fit_order,
-                          reconstruction_method=options.reconstruction_method,
-                          interpol_kind=options.kind_interpol,
-                          )
+        try:
+            myCalib = Xcalibu(calib_name=options.name,
+                              calib_file_name=file_name,
+                              fit_order=options.fit_order,
+                              reconstruction_method=options.reconstruction_method,
+                              interpol_kind=options.kind_interpol,
+                              )
+        except XCalibError as xcaliberr:
+            print(f"\nERROR: {xcaliberr.message}")
+            sys.exit(0)
 
+        print("--------------------------------------------------")
         # Some calib parameters:
         _xmin = myCalib.min_x()
         _xmax = myCalib.max_x()
@@ -1334,68 +1377,58 @@ def main():
 
         # Example : calculation of middle point (X range) of calibration.
         _xtest = (_xmin + _xmax) / 2
-        _time0 = time.time()
+        _time0 = time.perf_counter()
         _ytest = myCalib.get_y(_xtest)
-        _calc_duration = time.time() - _time0
+        _calc_duration = time.perf_counter() - _time0
 
         if TIME_DISPLAY_FOUND:
             _calc_duration = timedisplay.duration_format(_calc_duration)
 
         log.info("y value of %g = %g (%s)" % (_xtest, _ytest, _calc_duration))
 
-        _NB_POINTS = 25
-        # bench example : calculation of _NB_POINTS points.
-        _time0 = time.time()
-        for xx in numpy.arange(_xmin, _xmax, _xrange / _NB_POINTS):
+        # bench example : calculation of some points.
+        _time0 = time.perf_counter()
+        for xx in numpy.arange(_xmin, _xmax, _xrange / SAMPLING_NB_POINTS):
             yy = myCalib.get_y(xx)
             # print( " f(%06.3f)=%06.3f   "%(xx, yy),)
-        _Ncalc_duration = time.time() - _time0
+        _Ncalc_duration = time.perf_counter() - _time0
 
         if TIME_DISPLAY_FOUND:
             _Ncalc_duration = timedisplay.duration_format(_Ncalc_duration)
 
         log.info(
             "Calculation of %d values of y. duration : %s"
-            % (_NB_POINTS, _Ncalc_duration)
+            % (SAMPLING_NB_POINTS, _Ncalc_duration)
         )
 
-        sys.stdout.flush()
+        if myCalib.is_monotonic:
+            print("--------- Reverse computation ----------")
+            print(f"xmin={myCalib.Xmin} xmax={myCalib.Xmax}")
+
+            y_min = myCalib.get_y(myCalib.Xmin)
+            y_max = myCalib.get_y(myCalib.Xmax)
+            y_middle = (y_max + y_min) / 2
+            print(f"y_min={y_min} y_max={y_max}   y_middle={y_middle}")
+            print(f"myCalib.get_x({y_middle})={myCalib.get_x(y_middle)}")
+
+            yy = numpy.linspace(y_min, y_max, SAMPLING_NB_POINTS)
+            xx = myCalib.get_x(yy)
+            yyy = myCalib.get_y(xx)
+            diff = yy-yyy
+            for ii in range(len(yy)):
+                print(f"{yy[ii]:.15f} -> {xx[ii]:.15f} -> {yyy[ii]:.15f}  diff={diff[ii]:.15f}")
+            print(f"max diff= {max(diff)}")
+
+            # SAMPLING_NB_POINTS =   40 -> max diff= 0.0363018
+            # SAMPLING_NB_POINTS =  400 -> max diff= 0.0003790
+            # SAMPLING_NB_POINTS = 4000 -> max diff= 0.0000038 = 3.8e-06
 
         if options.plot:
-            myCalib.plot()
+            try:
+                myCalib.plot()
+            except KeyboardInterrupt:
+                print("bye bye")
 
-
-# Some data for demo
-coeffs_U35A = [0.005827806, -0.2468173, 4.322111, -40.01252, 206.4701, -561.212, 638.7663]
-
-demo_calib_string = """
-# TEST calibration
-# Type TABLE
-# Comments are starting with '#'
-# Spaces are mainly ignored.
-
-CALIB_NAME = B52
-CALIB_TYPE = TABLE
-CALIB_TIME = 1400081171.300155
-CALIB_DESC = 'test table : example of matching lines'
-#CALIB_TITI = 14
-
-B52[0.8e-2] = -0.83e-2
-B52[1]=1
-B52[3]= 2
-B52[5]=-12
-B52 [6]=  -3
-B52 [7]=   2
-B52[10]=   4.5
- B52[13]=7.5
-   B52[15]=18.5
-B52[18]=0.5e2
-B52[23]=	42
-B52[23.1]=0.61e2
-B52[27.401] = 0.72e2
-B52[32]=  62
-B52[0.5e2] = +0.53e2
-"""
 
 if __name__ == "__main__":
     main()
