@@ -70,9 +70,6 @@ XCALIBU_DIRBASE = os.path.dirname(os.path.realpath(__file__))
 __all__ = ["Xcalibu", "XCalibError"]
 
 
-SAMPLING_NB_POINTS = 100
-
-
 class XCalibError(Exception):
     """Custom exception class for Xcalibu."""
 
@@ -115,6 +112,7 @@ class Xcalibu:
         self._calib_order = 0  # Order of the polynom used for POLY calibrations.
         self._calib_file_format = "XCALIBU"  # "TWO_COLS" | "ONE_COL"
         self._fill_value = None
+        self._sampling_nb_points = 20
 
         self.is_monotonic = None
         self.is_increasing = None
@@ -206,7 +204,7 @@ class Xcalibu:
 
             # raw data arrays must be filled for POLY.
             if self.get_calib_type() == "POLY":
-                self.x_raw = numpy.linspace(self.Xmin, self.Xmax, SAMPLING_NB_POINTS)
+                self.x_raw = numpy.linspace(self.Xmin, self.Xmax, self.get_sampling_nb_points())
                 self.y_raw = self.calc_poly_value(self.x_raw)
 
             print("========================================")
@@ -788,6 +786,21 @@ class Xcalibu:
         self.Xmin = xmin
         self.Xmax = xmax
 
+    def set_sampling_nb_points(self, nb_points):
+        """
+        Set the number of points to use for POLY reverse calibration via sampled table.
+
+        # Examples:
+        # SAMPLING_NB_POINTS =   40 -> max diff= 0.0363018
+        # SAMPLING_NB_POINTS =  400 -> max diff= 0.0003790
+        # SAMPLING_NB_POINTS = 4000 -> max diff= 0.0000038 = 3.8e-06
+        """
+
+        self._sampling_nb_points = nb_points
+
+    def get_sampling_nb_points(self):
+        return self._sampling_nb_points
+
     def fit(self):
         """
         Fit raw data if needed.
@@ -990,7 +1003,7 @@ class Xcalibu:
             log.info(f"Plotting POLY={self._polynomial} ; "
                      f"desc={self.get_calib_description()} ; name={self.get_calib_name()}")
 
-            self.x_calc = numpy.linspace(self.Xmin, self.Xmax, SAMPLING_NB_POINTS)
+            self.x_calc = numpy.linspace(self.Xmin, self.Xmax, self.get_sampling_nb_points())
             self.y_calc = self.get_y_array(self.x_calc)
 
             # print("x_calc=", self.x_calc)
@@ -1428,7 +1441,7 @@ def main():
 
         # bench example : calculation of some points.
         _time0 = time.perf_counter()
-        for xx in numpy.arange(_xmin, _xmax, _xrange / SAMPLING_NB_POINTS):
+        for xx in numpy.arange(_xmin, _xmax, _xrange / myCalib.get_sampling_nb_points()):
             yy = myCalib.get_y(xx)
             # print( " f(%06.3f)=%06.3f   "%(xx, yy),)
         _Ncalc_duration = time.perf_counter() - _time0
@@ -1438,7 +1451,7 @@ def main():
 
         log.info(
             "Calculation of %d values of y. duration : %s"
-            % (SAMPLING_NB_POINTS, _Ncalc_duration)
+            % (myCalib.get_sampling_nb_points(), _Ncalc_duration)
         )
 
         if myCalib.is_monotonic:
@@ -1451,17 +1464,13 @@ def main():
             print(f"y_min={y_min} y_max={y_max}   y_middle={y_middle}")
             print(f"myCalib.get_x({y_middle})={myCalib.get_x(y_middle)}")
 
-            yy = numpy.linspace(y_min, y_max, SAMPLING_NB_POINTS)
+            yy = numpy.linspace(y_min, y_max, myCalib.get_sampling_nb_points())
             xx = myCalib.get_x(yy)
             yyy = myCalib.get_y(xx)
             diff = yy-yyy
             for ii in range(len(yy)):
                 print(f"{yy[ii]:.15f} -> {xx[ii]:.15f} -> {yyy[ii]:.15f}  diff={diff[ii]:.15f}")
             print(f"max diff= {max(diff)}")
-
-            # SAMPLING_NB_POINTS =   40 -> max diff= 0.0363018
-            # SAMPLING_NB_POINTS =  400 -> max diff= 0.0003790
-            # SAMPLING_NB_POINTS = 4000 -> max diff= 0.0000038 = 3.8e-06
 
         if options.plot:
             try:
