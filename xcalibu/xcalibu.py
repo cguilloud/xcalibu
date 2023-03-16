@@ -173,6 +173,27 @@ class Xcalibu:
             self.check_monotonic()
             self.compute_interpolation()
 
+    def print_info(self):
+        """
+        Print info about calib.
+        """
+        print(f"-------------------- {self.get_calib_name()} -------------------")
+        print(f"               type: {self.get_calib_type()}")
+        print(f"               desc: {self.get_calib_description()}")
+        print(f"               time: {self.get_calib_time()}")
+        print(f"             coeffs: {self.get_coeffs()}")
+        print(f"           rec meth: {self.get_reconstruction_method()}")
+        print(f"        calib order: {self.get_calib_order()}")
+        print(f"          fit order: {self.get_fit_order()}")
+        print(f"          monotonic: {self.is_monotonic}")
+        print(f"    calib file name: {self.get_calib_file_name()}")
+        print(f"      interopl kind: {self.get_interpol_kind()}")
+        print(f"interpol fill value: {self.get_interpol_fill_value()}")
+        print(f"          min/max X: [{self.min_x()} ; {self.max_x()}]")
+        print(f"          min/max Y: [{self.min_y()} ; {self.max_y()}]")
+
+        print("----------------------------------------------------------------")
+
     def compute_interpolation(self):
         """
         Compute interoplation function if reconstruction method is INTERPOLATION.
