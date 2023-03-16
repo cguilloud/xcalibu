@@ -70,7 +70,7 @@ XCALIBU_DIRBASE = os.path.dirname(os.path.realpath(__file__))
 __all__ = ["Xcalibu", "XCalibError"]
 
 
-SAMPLING_NB_POINTS = 40
+SAMPLING_NB_POINTS = 100
 
 
 class XCalibError(Exception):
@@ -194,13 +194,13 @@ class Xcalibu:
             print("========================================")
             self.ifunc = interpolate.interp1d(self.x_raw, self.y_raw,
                                               kind=self.get_interpol_kind(),
-                                              bounds_error=False, fill_value=999.999)
+                                              bounds_error=False, fill_value=numpy.nan)
             if self.is_monotonic:
                 log.info("compute_interpolation() reverse")
 
                 self.ifuncR = interpolate.interp1d(self.y_raw, self.x_raw,
                                                    kind=self.get_interpol_kind(),
-                                                   bounds_error=False, fill_value=666.666)
+                                                   bounds_error=False, fill_value=numpy.nan)
             else:
                 self.ifuncR = None
         else:
