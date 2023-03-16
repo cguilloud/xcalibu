@@ -8,6 +8,8 @@ Examples of calibrations for test and demo purposes.
 import logging
 import os
 
+import numpy
+
 from xcalibu import Xcalibu
 
 
@@ -71,6 +73,55 @@ def demo_xcalibu_3(do_plot):
         myCalib2.plot()
 
 
+
+def demo_xcalibu_U32a(do_plot):
+    """
+    U32a undu table calibration.
+    U32a_1_table.dat looks like:
+        #E    u32a
+        4.500 13.089
+        4.662 13.410
+        4.823 13.727
+        ...
+        10.444 34.814
+        10.500 36.708
+        10.675 41.711
+    """
+    log = logging.getLogger("XCALIBU")
+
+    myCalibU32a = Xcalibu(calib_name="U32ATABLE", calib_type="TABLE",
+                          calib_file_name=XCALIBU_DIRBASE + "/examples/U32a_1_table.txt",
+                          description="2cols table calib of U32A undulator")
+    # myCalibU32a.set_reconstruction_method("INTERPOLATION", kind="cubic")
+    myCalibU32a.set_reconstruction_method("INTERPOLATION", kind="quadratic")
+
+    myCalibU32a.set_x_limits(None, None)
+    myCalibU32a.set_interpol_fill_value(numpy.nan)
+
+    myCalibU32a.compute_interpolation()
+
+
+    myCalibU32a.print_info()
+
+    print(f"   myCalibU32a(-42) = {myCalibU32a.get_y(-42)}")
+    print(f"   myCalibU32a(4.5) = {myCalibU32a.get_y(4.5)}")
+    print(f"     myCalibU32a(7) = {myCalibU32a.get_y(7)}")
+    print(f"myCalibU32a(10.675) = {myCalibU32a.get_y(10.675)}")
+    print(f"   myCalibU32a(+42) = {myCalibU32a.get_y(+42)}")
+
+#    print("get_x(get_y(7))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7))))
+    # quadratic -> 7.0000295
+    #     cubic -> 6.9997924
+
+#    print("get_x(get_y(7.04))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7.04))))
+    # quadratic -> 7.04
+    #     cubic -> 7.039999
+
+    if do_plot:
+        myCalibU32a.plot()
+
+
+
 '''
 def demo_xcalibu_(do_plot):
     """
@@ -83,17 +134,7 @@ def demo_xcalibu_(do_plot):
         .plot()
 '''
 
-'''
-def demo_xcalibu_(do_plot):
-    """
-    ... calibration
-    """
-    log = logging.getLogger("XCALIBU")
 
-
-    if do_plot:
-        .plot()
-'''
 
 
 def demo_xcalibu(do_plot):
@@ -207,33 +248,6 @@ def demo_xcalibu(do_plot):
     print("---------------------------------------------------------------------------")
     print("---------------------------------------------------------------------------")
 
-    """
-    U32a_1_table.dat looks like:
-        #E    u32a
-        4.500 13.089
-        4.662 13.410
-        4.823 13.727
-        ...
-        10.444 34.814
-        10.500 36.708
-        10.675 41.711
-    """
-    myCalibU32a = Xcalibu(calib_name="U32ATABLE", calib_type="TABLE",
-                          calib_file_name=XCALIBU_DIRBASE + "/examples/U32a_1_table.dat",
-                          description="2cols table calib of U32A undulator")
-    # myCalibU32a.set_reconstruction_method("INTERPOLATION", kind="cubic")
-    myCalibU32a.set_reconstruction_method("INTERPOLATION", kind="quadratic")
-    myCalibPolyB.check_monotonic()
-    myCalibU32a.compute_interpolation()
-
-#    print("get_x(get_y(7))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7))))
-    # quadratic -> 7.0000295
-    #     cubic -> 6.9997924
-
-#    print("get_x(get_y(7.04))=", myCalibU32a.get_x(float(myCalibU32a.get_y(7.04))))
-    # quadratic -> 7.04
-    #     cubic -> 7.039999
-
     if do_plot:
         # myCalibString.plot()    # demo string calibration
         # myCalibPoly.plot()      # order 2 poly
@@ -337,9 +351,10 @@ def main():
     print(" plot=", options.plot)
     print("--------------------------------------")
 
-    demo_xcalibu_1(options.plot)
-    demo_xcalibu_2(options.plot)
-    demo_xcalibu_3(options.plot)
+    # demo_xcalibu_1(options.plot)
+    # demo_xcalibu_2(options.plot)
+    # demo_xcalibu_3(options.plot)
+    demo_xcalibu_U32a(options.plot)
 
 
 if __name__ == "__main__":

@@ -114,9 +114,10 @@ class Xcalibu:
         self._description = description
         self._calib_order = 0  # Order of the polynom used for POLY calibrations.
         self._calib_file_format = "XCALIBU"  # "TWO_COLS" | "ONE_COL"
+        self._fill_value = None
+
         self.is_monotonic = None
         self.is_increasing = None
-
         self.Xmin = numpy.nan
         self.Xmax = numpy.nan
         self.Ymin = numpy.nan
@@ -215,13 +216,13 @@ class Xcalibu:
             print("========================================")
             self.ifunc = interpolate.interp1d(self.x_raw, self.y_raw,
                                               kind=self.get_interpol_kind(),
-                                              bounds_error=False, fill_value=numpy.nan)
+                                              bounds_error=False, fill_value=self.get_interpol_fill_value())
             if self.is_monotonic:
                 log.info("compute_interpolation() reverse")
 
                 self.ifuncR = interpolate.interp1d(self.y_raw, self.x_raw,
                                                    kind=self.get_interpol_kind(),
-                                                   bounds_error=False, fill_value=numpy.nan)
+                                                   bounds_error=False, fill_value=self.get_interpol_fill_value())
             else:
                 self.ifuncR = None
         else:
@@ -398,8 +399,9 @@ class Xcalibu:
 
     def set_interpol_fill_value(self, value):
         """
-        Set value to return when query value is outside TABLE limits.
+        Set INTERPOLATION value to return when query value is out of limits.
         <value>: float
+        default : numpy.nan
         """
         self._fill_value = value
 
@@ -1062,16 +1064,28 @@ class Xcalibu:
     def is_in_valid_x_range(self, x):
         """
         x: float
-        Return True if <x> is in calibration boundaries.
+        Return True if <x> is in calibration boundaries or if there is not boundaries
+
+        If limits are None AND fill_value is None => return FALSE
         """
         if self.get_calib_type() == "POLY":
             return True
 
-        if (x < (self.Xmin - 0.00001)) or (x > (self.Xmax + 0.00001)):
-            log.info("Xmin=%f Xmax=%f" % (self.Xmin, self.Xmax))
-            return False
+        if self.Xmin is not None:
+            if (x < (self.Xmin - 0.00001)):
+                return False
         else:
-            return True
+            if self.get_interpol_fill_value() is None:
+                return False
+
+        if self.Xmax is not None:
+            if x > (self.Xmax + 0.00001):
+                return False
+        else:
+            if self.get_interpol_fill_value() is None:
+                return False
+
+        return True
 
     def is_in_valid_y_range(self, y):
         # humm bad : would be better to define Ymin Ymax as bounds of
@@ -1380,7 +1394,8 @@ def main():
         print("--------------------------------------")
 
         try:
-            myCalib = Xcalibu(calib_name=options.name,
+            myCalib = Xcalibu(calib_type = options.type,
+                              calib_name=options.name,
                               calib_file_name=file_name,
                               fit_order=options.fit_order,
                               reconstruction_method=options.reconstruction_method,
@@ -1391,6 +1406,10 @@ def main():
             sys.exit(0)
 
         print("--------------------------------------------------")
+
+
+        myCalib.print_info()
+
         # Some calib parameters:
         _xmin = myCalib.min_x()
         _xmax = myCalib.max_x()
