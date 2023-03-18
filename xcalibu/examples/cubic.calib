@@ -4,7 +4,7 @@
 CALIB_NAME = CUBIC1
 CALIB_TYPE = TABLE
 CALIB_TIME = 1400081171.300155
-CALIB_DESC = "roughly  y=0.03x^{3}+0.02x^{2}+0.01x+1"
+CALIB_DESC = "roughly  y=1 + 0.01 x + 0.02 x2 + 0.03 x3"
 
 CUBIC1[-5] = -2.3
 CUBIC1[-4] = -0.65

@@ -3,17 +3,13 @@
 # Comments are starting with '#'
 # Spaces are mainly ignored.
 
-CALIB_NAME = ST
+CALIB_NAME = Unsorted non monotonic data
 CALIB_TYPE = TABLE
 CALIB_TIME = 1400081171.300155
-CALIB_DESC = "test simple  table"
+CALIB_DESC = "test unsorted table"
 #CALIB_TITI = 14
 
-
-# WARNING :  unsorted Xs... 
-# what to do for interpolation ???
-# to sort before to calculate ?
-# ...-> not allowed.
+# WARNING :  unsorted data non monotonic -> no reverse calculation
 
 ST[1]=1
 ST[2]=2

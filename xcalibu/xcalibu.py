@@ -92,7 +92,9 @@ class Xcalibu:
         polynomial=None,
         reconstruction_method=None,
         interpol_kind="linear",
-        description=None
+        description=None,
+        samp_nbp=20,
+        calib_limits=None
     ):
 
         # Default parameters (accessible via constructor)
@@ -105,6 +107,7 @@ class Xcalibu:
         self._polynomial = None       # numpy Polynomial object
         self._rec_method = None
         self._interpol_kind = "linear"
+        self._sampling_nb_points = 20
 
         # internal parameters
         self._calib_time = None
@@ -112,8 +115,9 @@ class Xcalibu:
         self._calib_order = 0  # Order of the polynom used for POLY calibrations.
         self._calib_file_format = "XCALIBU"  # "TWO_COLS" | "ONE_COL"
         self._fill_value = None
-        self._sampling_nb_points = 20
+        self.coeffR = None
 
+        self.plot_reverse = False
         self.is_monotonic = None
         self.is_increasing = None
         self.Xmin = numpy.nan
@@ -148,6 +152,9 @@ class Xcalibu:
         if fit_order is not None:
             self.set_fit_order(fit_order)
 
+        if calib_limits is not None:
+            self.set_x_limits(*calib_limits)
+
         # Coeffs
         if coeffs is not None:
             self.set_coeffs(coeffs)
@@ -157,6 +164,9 @@ class Xcalibu:
         # * POLYFIT : polynomial fitting of the dataset.
         if reconstruction_method is not None:
             self.set_reconstruction_method(reconstruction_method, interpol_kind)
+
+        if samp_nbp is not None:
+            self.set_sampling_nb_points(samp_nbp)
 
         # Description
         if description is not None:
@@ -188,6 +198,7 @@ class Xcalibu:
         print(f"    calib file name: {self.get_calib_file_name()}")
         print(f"      interopl kind: {self.get_interpol_kind()}")
         print(f"interpol fill value: {self.get_interpol_fill_value()}")
+        print(f" sampling nb points: {self.get_sampling_nb_points()}")
         print(f"          min/max X: [{self.min_x()} ; {self.max_x()}]")
         print(f"          min/max Y: [{self.min_y()} ; {self.max_y()}]")
 
@@ -752,6 +763,7 @@ class Xcalibu:
                 self.Ymin = self.get_y(self.Xmin)
                 self.Ymax = self.get_y(self.Xmax)
             else:
+                print("_coeffs_dict=", _coeffs_dict)
                 raise ValueError(f"len(_coeffs_dict)+1={len(_coeffs_dict)+1}  _declared_order={_declared_order}")
 
     def set_coeffs(self, coeffs):
@@ -818,9 +830,6 @@ class Xcalibu:
 
         _order = self.get_fit_order()
         self._poly_coeffs = numpy.zeros(_order + 1)
-
-        # ??
-        self.coeffR = None
 
         _time0 = time.perf_counter()
 
@@ -897,10 +906,15 @@ class Xcalibu:
             if self.get_reconstruction_method() == "INTERPOLATION" and self.is_monotonic:
                 return self.ifuncR(y)
             else:
-                _order = self.get_calib_order()
-                for ii in range(_order + 1):
-                    x = x + self.coeffR[_order - ii] * pow(y, ii)
-                return x
+                if self.coeffR is not None:
+                    # Calculate with reverse poly.
+                    _order = self.get_calib_order()
+                    for ii in range(_order + 1):
+                        x = x + self.coeffR[_order - ii] * pow(y, ii)
+                    return x
+                else:
+                    print("should try alternative method...")
+
 
         elif self.get_calib_type() == "TABLE":
             if self.get_reconstruction_method() == "INTERPOLATION" and self.is_monotonic:
@@ -992,7 +1006,7 @@ class Xcalibu:
         """
         Use matplotlib to display calibration curve.
         """
-        # Load matplotlib but don't want matplotlib debug
+        # Load matplotlib but get rid of matplotlib debug.
         logging.getLogger().setLevel("INFO")
         import matplotlib.pyplot as plt
         import matplotlib
@@ -1005,21 +1019,33 @@ class Xcalibu:
 
             self.x_calc = numpy.linspace(self.Xmin, self.Xmax, self.get_sampling_nb_points())
             self.y_calc = self.get_y_array(self.x_calc)
+            print("x_calc=", self.x_calc)
+            print("y_calc=", self.y_calc)
 
-            # print("x_calc=", self.x_calc)
-            # print("y_calc=", self.y_calc)
-            # print("calib order=", self.get_calib_order())
-            fig, ax = plt.subplots()
-            _ = plt.plot(self.x_calc, self.y_calc, "--")
-            _ = plt.plot(self.y_calc, self.x_calc, "--")
 
-            ax.set_xlabel('my xdata')
-            ax.set_ylabel('my ydata')
+            plt.figure(1)
+            plt.plot(self.x_calc, self.y_calc, 'r-', label='poly')
+            plt.xlabel('x')
+            plt.ylabel('y')
+            plt.title(self.get_calib_description())
+            plt.legend()
 
-            l1 = (f"POLY={self._polynomial} ({self.get_calib_name()})  \n"
-                  f"desc={self.get_calib_description()}")
-            l2 = "reverse"
-            ax.legend([l1, l2], loc="best")
+            # PLOT LIMITS
+            #bottom, top = plt.xlim()
+            #print("X plot limits = ", bottom, top)
+            # plt.xlim(self.min_x(), self.max_x())
+            #bottom, top = plt.ylim()
+            #print("Y plot limits = ", bottom, top)
+            # plt.ylim(self.min_y(), self.max_y())
+
+            if self.plot_reverse:
+                plt.figure(2)
+                plt.plot(self.y_calc, self.x_calc, 'b-', label='reverse')
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.title('REVERSE POLY')
+                plt.legend()
+
             plt.show()
 
         elif self.get_calib_type() == "TABLE":
@@ -1306,6 +1332,24 @@ def main():
     )
 
     parser.add_option(
+        "-f",
+        "--fit_order",
+        dest="fit_order",
+        type=int,
+        default=3,
+        help="Fit order for data fitting",
+    )
+
+    parser.add_option(
+        "-k",
+        "--kind",
+        dest="kind_interpol",
+        type="string",
+        default="linear",
+        help="Kind of interpolation: linear, cubic, quadratic etc...",
+    )
+
+    parser.add_option(
         "-n",
         "--name",
         dest="name",
@@ -1324,15 +1368,6 @@ def main():
     )
 
     parser.add_option(
-        "-t",
-        "--type",
-        dest="type",
-        type="string",
-        default="TABLE",
-        help="Type of calibration: TABLE or POLYNOM",
-    )
-
-    parser.add_option(
         "-r",
         "--reconstruction_method",
         dest="reconstruction_method",
@@ -1342,21 +1377,21 @@ def main():
     )
 
     parser.add_option(
-        "-k",
-        "--kind",
-        dest="kind_interpol",
-        type="string",
-        default="linear",
-        help="Kind of interpolation: linear, cubic, quadratic etc...",
+        "-s",
+        "--sampling_nb_points",
+        dest="sampnbp",
+        type=int,
+        default=20,
+        help="Sampling number of points",
     )
 
     parser.add_option(
-        "-f",
-        "--fit_order",
-        dest="fit_order",
-        type=int,
-        default=3,
-        help="Fit order for data fitting",
+        "-t",
+        "--type",
+        dest="type",
+        type="string",
+        default="TABLE",
+        help="Type of calibration: TABLE or POLYNOM",
     )
 
     # Gather options and arguments.
@@ -1399,11 +1434,12 @@ def main():
 
         print("--------------args------------------------")
         print(options)
-        print(" type=", options.type)
-        print(" name=", options.name)
-        print(" kind=", options.kind_interpol)
-        print(" rec_method=", options.reconstruction_method)
         print(" fit_order=", options.fit_order)
+        print(" kind=", options.kind_interpol)
+        print(" name=", options.name)
+        print(" rec_method=", options.reconstruction_method)
+        print(" sampnbp=", options.sampnbp)
+        print(" type=", options.type)
         print("--------------------------------------")
 
         try:
@@ -1413,6 +1449,7 @@ def main():
                               fit_order=options.fit_order,
                               reconstruction_method=options.reconstruction_method,
                               interpol_kind=options.kind_interpol,
+                              samp_nbp=options.sampnbp
                               )
         except XCalibError as xcaliberr:
             print(f"\nERROR: {xcaliberr.message}")
