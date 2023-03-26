@@ -42,6 +42,8 @@
 #
 # Ndp: https://www.desmos.com/calculator?lang=fr
 
+from scipy.fft import fft, ifft
+from scipy import signal
 
 import logging
 import numbers
@@ -73,8 +75,10 @@ __all__ = ["Xcalibu", "XCalibError"]
 class XCalibError(Exception):
     """Custom exception class for Xcalibu."""
 
-    def __init__(self, message):
+    def __init__(self, message, calib=None):
         self.message = message
+        if calib is not None:
+            self.message += f" calib name = {calib.get_calib_name()}"
 
     def __str__(self):
         return "XCALIBU error: %s" % self.message
@@ -118,6 +122,8 @@ class Xcalibu:
         self.coeffR = None
 
         self.plot_reverse = False
+        self._plot_variation = False
+        self._plot_variation_fft = False
         self.is_monotonic = None
         self.is_increasing = None
         self.Xmin = numpy.nan
@@ -201,6 +207,7 @@ class Xcalibu:
         print(f" sampling nb points: {self.get_sampling_nb_points()}")
         print(f"          min/max X: [{self.min_x()} ; {self.max_x()}]")
         print(f"          min/max Y: [{self.min_y()} ; {self.max_y()}]")
+        print(f"          data size: {len(self.x_raw)}")
 
         print("----------------------------------------------------------------")
 
@@ -218,11 +225,11 @@ class Xcalibu:
                 self.x_raw = numpy.linspace(self.Xmin, self.Xmax, self.get_sampling_nb_points())
                 self.y_raw = self.calc_poly_value(self.x_raw)
 
-            print("========================================")
-            print(self.x_raw)
-            print(self.y_raw)
-            print(self.get_interpol_kind())
-            print("========================================")
+            # print("========================================")
+            # print(self.x_raw)
+            # print(self.y_raw)
+            # print(self.get_interpol_kind())
+            # print("========================================")
             self.ifunc = interpolate.interp1d(self.x_raw, self.y_raw,
                                               kind=self.get_interpol_kind(),
                                               bounds_error=False, fill_value=self.get_interpol_fill_value())
@@ -261,6 +268,7 @@ class Xcalibu:
                 self.is_monotonic = False
                 self.is_increasing = None
                 print("calib is NOT monotonic")
+                print("y diff = ", y_diff)
 
         if self.get_calib_type() == "POLY":
             log.info(f"check if poly is monotonic on {self.Xmin} {self.Xmax}")
@@ -297,7 +305,7 @@ class Xcalibu:
         """
         log.debug("set_calib_file_name(%s)" % fn)
         self._calib_file_name = fn
-        print(f"Calib file name set to: \"{self.get_calib_file_name()}\"")
+        # print(f"Calib file name set to: \"{self.get_calib_file_name()}\"")
 
     def get_calib_file_name(self):
         return self._calib_file_name
@@ -316,7 +324,7 @@ class Xcalibu:
         Calibration name is read from the calibration file or string (field : CALIB_NAME).
         """
         self._calib_name = value
-        print(f"calib name set to: \"{self.get_calib_name()}\"")
+        # print(f"calib name set to: \"{self.get_calib_name()}\"")
 
     def get_calib_name(self):
         """
@@ -338,7 +346,7 @@ class Xcalibu:
         else:
             raise ValueError(f"wrong calib type: {value}")
 
-        print(f"calib type set to: \"{self.get_calib_type()}\"")
+        # print(f"calib type set to: \"{self.get_calib_type()}\"")
 
     def get_calib_type(self):
         """
@@ -401,7 +409,7 @@ class Xcalibu:
                      ex: 'linear', 'quadratic', 'cubic'
         """
         self._interpol_kind = value.lower()
-        print(f"interpol_kind set to: \"{self.get_interpol_kind()}\"")
+        # print(f"interpol_kind set to: \"{self.get_interpol_kind()}\"")
 
     def get_interpol_kind(self):
         return self._interpol_kind
@@ -444,7 +452,7 @@ class Xcalibu:
     calibration USAGE parameters.
     """
 
-    def set_reconstruction_method(self, method, kind=None):
+    def set_reconstruction_method(self, method, kind="linear"):
         """
         Set method to retreive y data from x data : can be 'INTERPOLATION' , 'POLYFIT' or 'POLY'
         """
@@ -458,9 +466,9 @@ class Xcalibu:
         elif method == "POLY":
             self._rec_method = method
         else:
-            raise XCalibError("unknown method : %s " % method)
+            raise XCalibError("unknown method : %s " % method, self)
 
-        print(f"reconstruction methode set to: \"{self.get_reconstruction_method()}\"")
+        # print(f"reconstruction method set to: \"{self.get_reconstruction_method()}\"")
 
     def get_reconstruction_method(self):
         return self._rec_method
@@ -491,15 +499,17 @@ class Xcalibu:
         _calib_file_name = self.get_calib_file_name()
         _calib_string = self.get_calib_string()
 
+        _t0_loading = time.time()
+
         if _calib_file_name is not None:
             try:
                 calib_source = open(_calib_file_name, mode="r")
                 print(f"open file: {_calib_file_name}")
             except IOError:
-                raise XCalibError("Unable to open file '%s' \n" % _calib_file_name)
+                raise XCalibError("Unable to open file '%s' \n" % _calib_file_name, self)
             except Exception:
                 raise XCalibError(
-                    "error in calibration loading (file=%s)" % _calib_file_name
+                    "error in calibration loading (file=%s)" % _calib_file_name, self
                 )
         elif _calib_string is not None:
             # print("loading calib from string:")
@@ -568,7 +578,7 @@ class Xcalibu:
                             "Parsing Error : unknown calib field {%s} with value {%s} at line %d"
                             % (_info, _value, _line_nb)
                         )
-                        raise XCalibError(_msg)
+                        raise XCalibError(_msg, self)
 
                 else:
                     """
@@ -608,7 +618,7 @@ class Xcalibu:
                                 if self.get_calib_name() is None:
                                     raise XCalibError(
                                         "Parsing Error : Line %d : name of the calibration is unknown."
-                                        % _line_nb
+                                        % _line_nb, self
                                     )
                                 else:
                                     # ()      : save recognized group pattern
@@ -693,16 +703,18 @@ class Xcalibu:
                     else:
                         raise XCalibError(
                             "%s line %d : invalid calib type : %s\nraw line : {%s}"
-                            % (calib_source, _line_nb, self.get_calib_type(), line)
+                            % (calib_source, _line_nb, self.get_calib_type(), line) , self
                         )
 
             # End of parsing of lines.
 
+            _duration = time.time() - _t0_loading
+
             if _data_line_nb == 0:
-                raise XCalibError("No data line read in calib file.")
+                raise XCalibError("No data line read in calib file.", self)
             else:
                 self._data_lines = _data_line_nb
-                log.info("DATA lines read : %d" % self._data_lines)
+                log.info(f"DATA lines read : {self._data_lines} in {_duration:g}s")
 
         except XCalibError:
             print("\n--------------- ERROR IN PARSING --------------------")
@@ -728,14 +740,15 @@ class Xcalibu:
             )
 
             # Ensure data is sorted in ascending order
-            sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
-            _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
+        #    sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
+        #    _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
 
         self.x_raw = numpy.array(_xvalues)
         self.y_raw = numpy.array(_yvalues)
 
-        log.info("Raw X data : %s" % ", ".join(list(map(str, self.x_raw))))
-        log.info("Raw Y data : %s" % ", ".join(list(map(str, self.y_raw))))
+        if len(self.x_raw) < 100:
+            log.info("Raw X data : %s" % ", ".join(list(map(str, self.x_raw))))
+            log.info("Raw Y data : %s" % ", ".join(list(map(str, self.y_raw))))
 
         if self.get_calib_type() == "TABLE":
             if self.get_reconstruction_method() == "POLYFIT":
@@ -921,9 +934,12 @@ class Xcalibu:
                 return self.ifuncR(y)
             else:
                 _order = self.get_fit_order()
-                for ii in range(_order + 1):
-                    x = x + self.coeffR[_order - ii] * pow(y, ii)
-                return x
+                if self.coeffR is not None:
+                    for ii in range(_order + 1):
+                        x = x + self.coeffR[_order - ii] * pow(y, ii)
+                    return x
+                else:
+                    print("coeffR is None: no reverse poly calculated")
 
         else:
             print("[xcalibu.py] calc_reverse_value : ERROR in calib type")
@@ -1002,6 +1018,24 @@ class Xcalibu:
 
         _sf.close()
 
+
+    @property
+    def plot_variation(self):
+        return self._plot_variation
+
+    @plot_variation.setter
+    def plot_variation(self, value):
+        self._plot_variation = value
+
+    @property
+    def plot_variation_fft(self):
+        return self._plot_variation_fft
+
+    @plot_variation_fft.setter
+    def plot_variation_fft(self, value):
+        self._plot_variation_fft = value
+
+
     def plot(self):
         """
         Use matplotlib to display calibration curve.
@@ -1019,11 +1053,12 @@ class Xcalibu:
 
             self.x_calc = numpy.linspace(self.Xmin, self.Xmax, self.get_sampling_nb_points())
             self.y_calc = self.get_y_array(self.x_calc)
-            print("x_calc=", self.x_calc)
-            print("y_calc=", self.y_calc)
 
+#            if len(self.x_calc) < 1000:
+#                print("x_calc=", self.x_calc)
+#                print("y_calc=", self.y_calc)
 
-            plt.figure(1)
+            plt.figure()
             plt.plot(self.x_calc, self.y_calc, 'r-', label='poly')
             plt.xlabel('x')
             plt.ylabel('y')
@@ -1039,7 +1074,7 @@ class Xcalibu:
             # plt.ylim(self.min_y(), self.max_y())
 
             if self.plot_reverse:
-                plt.figure(2)
+                plt.figure()
                 plt.plot(self.y_calc, self.x_calc, 'b-', label='reverse')
                 plt.xlabel('x')
                 plt.ylabel('y')
@@ -1058,14 +1093,27 @@ class Xcalibu:
                             "fit(order=%s)" % self.get_fit_order(), ], loc="best", )
                 plt.show()
             elif _rec_method == "INTERPOLATION":
-                plt.plot(self.x_raw, self.y_raw, "o", label="data", linestyle="-")
+                plt.figure()
+                if self.plot_variation:
+                    if self.plot_variation_fft:
+                        self.f, self.pxx = signal.welch(self.y_raw - self.x_raw, 1/100)
+                        plt.loglog(1/self.f, self.pxx, 'r-', label='VARiation data (x vs y-x)')
+                    else:
+                        plt.plot(self.x_raw, self.y_raw - self.x_raw, 'r-', label='VARiation data (x vs y-x)')
+                else:
+                    plt.plot(self.x_raw, self.y_raw, 'r-', label='datDDa')
+
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.title(self.get_calib_description())
+                plt.legend()
 
                 # if self.is_monotonic:
                 #    # compute reverse plot
                 #    x_rawR =
                 #    y_rawR =
 
-                plt.legend(["INTERPOLATION raw data(%s)" % self.get_calib_name(), ], loc="best", )
+
                 plt.show()
             else:
                 log.error("plot : Unknown method : %s" % _rec_method)
@@ -1192,11 +1240,10 @@ class Xcalibu:
             log.debug("y=%f" % y)
             return y
         else:
-            log.error(
-                "xcalibu - Error : x=%f is not in valid range for this calibration" % x
-            )
+            log.error( f"xcalibu - Error : x={x} is not in valid range for calibration {self.get_calib_name()}" )
+
             raise XCalibError(
-                "XValue %g out of limits [%g;%g]" % (x, self.Xmin, self.Xmax)
+                "X value %g is out of limits [%g;%g]" % (x, self.Xmin, self.Xmax), self
             )
 
     """
@@ -1237,9 +1284,9 @@ class Xcalibu:
             log.debug("x=%f" % x)
             return x
         else:
-            # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax))
+            # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax), self)
             log.error(
-                "xcalibu - Error : y=%f is not in valid range for this R calibration"
+                "xcalibu - Error : y=%f is not in valid range for this R calibration (self.get_calib_name())"
                 % y
             )
             return -1
@@ -1260,12 +1307,12 @@ class Xcalibu:
         index = numpy.argwhere(criteria).flatten()
 
         if len(index) == 0:
-            raise XCalibError(f"Point ({x or ''}, {y or ''}) does not exist in table")
+            raise XCalibError(f"Point ({x or ''}, {y or ''}) does not exist in table", self)
 
         if len(index) > 1:
             if x is None or y is None:
                 # several points found with given X or Y. Need to give both X and Y.
-                raise XCalibError(f"Ambiguous match ({len(index)} points), specify both X and Y")
+                raise XCalibError(f"Ambiguous match ({len(index)} points), specify both X and Y", self)
             else:
                 # several identical points found, delete only the first one
                 index = index[0]
@@ -1459,6 +1506,12 @@ def main():
 
 
         myCalib.print_info()
+
+
+
+        myCalib.plot_variation = True
+        myCalib.plot_variation_fft = True
+
 
         # Some calib parameters:
         _xmin = myCalib.min_x()
