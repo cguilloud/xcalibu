@@ -54,6 +54,9 @@ from scipy import interpolate
 import sys
 import time
 
+#
+# TODO: to automatize check_mono and compute_interpolation for dynamic calib ?
+#
 
 try:
     import timedisplay
@@ -139,7 +142,7 @@ class Xcalibu:
         # Calib string.
         if calib_string is not None:
             self.set_calib_string(calib_string)
-            # print("calib string found:", calib_string[0:20])
+            # log.info("calib string found:", calib_string[0:20])
 
         # Calib file name.
         if calib_file_name is not None:
@@ -266,16 +269,16 @@ class Xcalibu:
             if numpy.all(y_diff > 0):
                 self.is_monotonic = True
                 self.is_increasing = True
-                print("calib is MONOTONIC INCREASING")
+                log.info("calib is MONOTONIC INCREASING")
             elif numpy.all(y_diff < 0):
                 self.is_monotonic = True
                 self.is_increasing = False
-                print("calib is MONOTONIC DECREASING")
+                log.info("calib is MONOTONIC DECREASING")
             else:
                 self.is_monotonic = False
                 self.is_increasing = None
-                print("calib is NOT monotonic")
-                print("y diff = ", y_diff)
+                log.info("calib is NOT monotonic")
+                log.info("y diff = ", y_diff)
 
         if self.get_calib_type() == "POLY":
             log.info(f"check if poly is monotonic on {self.Xmin} {self.Xmax}")
@@ -316,7 +319,7 @@ class Xcalibu:
         """
         log.debug("set_calib_file_name(%s)" % fn)
         self._calib_file_name = fn
-        # print(f"Calib file name set to: \"{self.get_calib_file_name()}\"")
+        # log.info(f"Calib file name set to: \"{self.get_calib_file_name()}\"")
 
     def get_calib_file_name(self):
         return self._calib_file_name
@@ -335,7 +338,7 @@ class Xcalibu:
         Calibration name is read from the calibration file or string (field : CALIB_NAME).
         """
         self._calib_name = value
-        # print(f"calib name set to: \"{self.get_calib_name()}\"")
+        # log.info(f"calib name set to: \"{self.get_calib_name()}\"")
 
     def get_calib_name(self):
         """
@@ -357,7 +360,7 @@ class Xcalibu:
         else:
             raise ValueError(f"wrong calib type: {value}")
 
-        # print(f"calib type set to: \"{self.get_calib_type()}\"")
+        # log.info(f"calib type set to: \"{self.get_calib_type()}\"")
 
     def get_calib_type(self):
         """
@@ -372,7 +375,7 @@ class Xcalibu:
         """
         if isinstance(order, int) and order > 0:
             self._fit_order = order
-            print(f"fit order set to: {self.get_fit_order()}")
+            log.info(f"fit order set to: {self.get_fit_order()}")
         else:
             log.error("set_fit_order : <fit_order> must be a positive integer.")
 
@@ -420,7 +423,7 @@ class Xcalibu:
                      ex: 'linear', 'quadratic', 'cubic'
         """
         self._interpol_kind = value.lower()
-        # print(f"interpol_kind set to: \"{self.get_interpol_kind()}\"")
+        # log.info(f"interpol_kind set to: \"{self.get_interpol_kind()}\"")
 
     def get_interpol_kind(self):
         return self._interpol_kind
@@ -473,13 +476,13 @@ class Xcalibu:
                 if kind is not None:
                     self.set_interpol_kind(kind)
                 else:
-                    print("NO KIND ???")
+                    log.info("NO KIND ???")
         elif method == "POLY":
             self._rec_method = method
         else:
             raise XCalibError("unknown method : %s " % method, self)
 
-        # print(f"reconstruction method set to: \"{self.get_reconstruction_method()}\"")
+        # log.info(f"reconstruction method set to: \"{self.get_reconstruction_method()}\"")
 
     def get_reconstruction_method(self):
         return self._rec_method
@@ -513,7 +516,7 @@ class Xcalibu:
         if _calib_file_name is not None:
             try:
                 calib_source = open(_calib_file_name, mode="r")
-                print(f"open file: {_calib_file_name}")
+                log.info(f"open file: {_calib_file_name}")
             except IOError:
                 raise XCalibError(
                     "Unable to open file '%s' \n" % _calib_file_name, self
@@ -523,7 +526,7 @@ class Xcalibu:
                     "error in calibration loading (file=%s)" % _calib_file_name, self
                 )
         elif _calib_string is not None:
-            # print("loading calib from string:")
+            # log.info("loading calib from string:")
             calib_source = _calib_string.split("\n")
         else:
             raise RuntimeError(
@@ -778,20 +781,20 @@ class Xcalibu:
             _declared_order = self.get_calib_order()
 
             if len(_coeffs_dict) == _declared_order + 1:
-                print(_coeffs_dict)
+                log.info(_coeffs_dict)
 
                 _coeff_list = [0] * len(_coeffs_dict)
 
                 for coef, val in _coeffs_dict.items():
                     _coeff_list[coef] = val
 
-                print(f"_coeff_list = {_coeff_list}")
+                log.info(f"_coeff_list = {_coeff_list}")
 
                 self.set_coeffs(_coeff_list)
                 self.Ymin = self.get_y(self.Xmin)
                 self.Ymax = self.get_y(self.Xmax)
             else:
-                print("_coeffs_dict=", _coeffs_dict)
+                log.info("_coeffs_dict=", _coeffs_dict)
                 raise ValueError(
                     f"len(_coeffs_dict)+1={len(_coeffs_dict)+1}  _declared_order={_declared_order}"
                 )
@@ -810,7 +813,7 @@ class Xcalibu:
         self._poly_coeffs = coeffs.copy()
 
         self._polynomial = Polynomial(self._poly_coeffs)
-        print(self._polynomial)
+        log.info(self._polynomial)
 
     def get_coeffs(self, order=None):
         """
@@ -847,11 +850,11 @@ class Xcalibu:
         Fit raw data if needed.
         """
         if self.get_calib_type() == "POLY":
-            print("??? no fit needed fot POLY")
+            log.info("??? no fit needed fot POLY")
             return
 
         if self.get_reconstruction_method() != "POLYFIT":
-            print(
+            log.info(
                 "[xcalibu.py] hummm : fit not needed... (rec method=%s)"
                 % self.get_reconstruction_method()
             )
@@ -867,13 +870,13 @@ class Xcalibu:
             # Numpy polyfit
             # self._poly_coeffs = list(numpy.polyfit(self.x_raw, self.y_raw, _order))
             # self._poly_coeffs.reverse()   # polyfit return coeffs in descending order.
-            # print("NUMPY POLYFIT=", self._poly_coeffs)
+            # log.info("NUMPY POLYFIT=", self._poly_coeffs)
 
             # Calculate Numpy Polynomial and fit coeffs.
             self._polynomial = numpy.polynomial.polynomial.Polynomial.fit(
                 self.x_raw, self.y_raw, _order, window=[self.Xmin, self.Xmax]
             )
-            print("Polynomial  =", self._polynomial)
+            log.info("Polynomial  =", self._polynomial)
             self._poly_coeffs = list(self._polynomial.coef)
 
         except numpy.RankWarning:
@@ -1045,7 +1048,7 @@ class Xcalibu:
         import matplotlib.pyplot as plt
         import matplotlib
 
-        print(f"matplotlib version {matplotlib.__version__}")
+        log.info(f"matplotlib version {matplotlib.__version__}")
 
         if self.get_calib_type() == "POLY":
 
@@ -1569,7 +1572,7 @@ def main():
             _xmin, _xmax, _xrange / myCalib.get_sampling_nb_points()
         ):
             yy = myCalib.get_y(xx)
-            # print( " f(%06.3f)=%06.3f   "%(xx, yy),)
+            # log.info( " f(%06.3f)=%06.3f   "%(xx, yy),)
         _Ncalc_duration = time.perf_counter() - _time0
 
         if TIME_DISPLAY_FOUND:
