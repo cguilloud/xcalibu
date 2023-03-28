@@ -7,7 +7,6 @@ Examples of calibrations for test and demo purposes.
 
 import logging
 import os
-import numpy
 from xcalibu import Xcalibu
 
 XCALIBU_DIRBASE = os.path.dirname(os.path.realpath(__file__))
@@ -61,7 +60,6 @@ def demo_xcalibu_err(do_plot):
 
     myCalibString.print_info()
 
-
     print(f"myCalibString.get_y(1)={myCalibString.get_y(1)}")
 
     print(f"myCalibString.get_y(0)={myCalibString.get_y(0)}")
@@ -84,11 +82,8 @@ def demo_xcalibu_(do_plot):
         .plot()
 '''
 
-def main():
 
-    """
-    arguments parsing
-    """
+def main():
     from optparse import OptionParser
 
     parser = OptionParser("demo_xcalibu.py")

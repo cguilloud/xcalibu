@@ -205,8 +205,8 @@ class Xcalibu:
         print(f" sampling nb points: {self.get_sampling_nb_points()}")
         print(f"          min/max X: [{self.min_x()} ; {self.max_x()}]")
         print(f"          min/max Y: [{self.min_y()} ; {self.max_y()}]")
-        print(f"          data size: {len(self.x_raw)}")
-
+        if self.get_calib_type() == "TABLE":
+            print(f"          data size: {len(self.x_raw)}")
         print("----------------------------------------------------------------")
 
     def compute_interpolation(self):
@@ -1066,7 +1066,7 @@ class Xcalibu:
             # print("x_calc=", self.x_calc)
             # print("y_calc=", self.y_calc)
 
-            if param is None or "cal" in param:
+            if not param or "cal" in param:
                 plt.figure()
                 plt.plot(self.x_calc, self.y_calc, "r-", label="poly")
                 plt.xlabel("x")
@@ -1318,7 +1318,7 @@ class Xcalibu:
         # Check validity range
         if self.is_in_valid_y_range(y):
             x = self.calc_reverse_value(y)
-            log.debug("x=%f" % x)
+            log.debug(f"x={x}")
             return x
         else:
             # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax), self)

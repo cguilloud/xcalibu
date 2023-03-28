@@ -69,8 +69,6 @@ def demo_xcalibu_2(do_plot):
     """
     2nd order POLY calibration from file.
     """
-    log = logging.getLogger("XCALIBU")
-
     myCalibPoly = Xcalibu(calib_file_name=XCALIBU_DIRBASE + "/examples/poly.calib")
     myCalibPoly.print_info()
 
@@ -111,7 +109,7 @@ def demo_xcalibu_U32a(do_plot):
         10.675 41.711
     """
     log = logging.getLogger("XCALIBU")
-
+    log.info("demo_xcalibu_U32a")
     myCalibU32a = Xcalibu(calib_name="U32ATABLE", calib_type="TABLE",
                           calib_file_name=XCALIBU_DIRBASE + "/examples/U32a_1_table.txt",
                           description="2cols table calib of U32A undulator")
@@ -122,7 +120,6 @@ def demo_xcalibu_U32a(do_plot):
     myCalibU32a.set_interpol_fill_value(numpy.nan)
 
     myCalibU32a.compute_interpolation()
-
 
     myCalibU32a.print_info()
 
@@ -211,7 +208,7 @@ def demo_xcalibu_RingRy(do_plot):
         myCalibRingRy.plot()
 
 
-def demo_xcalibu_dynamic(do_plot):
+def demo_xcalibu_dynamic_table(do_plot):
     """
     Dynamicaly populated calibration
     """
@@ -241,6 +238,7 @@ def demo_xcalibu_dynamic(do_plot):
 
     if do_plot:
         myDynamicCalib.plot()
+
 
 def demo_xcalibu_PolyB(do_plot):
     """
@@ -280,16 +278,45 @@ def demo_xcalibu_PolyB(do_plot):
         myCalibPolyB.plot()
 
 
+def demo_xcalibu_PolyU42b(do_plot):
+    """
+    Dynamic Poly calibration
+    """
+    coeffsU42b = [-1.18050708, 13.33015136, -3.74365885, 0.60740689, -0.02089632, -0.00541641, 0.00050147]
+
+    myCalibPolyU42b = Xcalibu(calib_name="PolyU42b", description="Polynom calib 6 for U42b")
+    myCalibPolyU42b.set_calib_type("POLY")
+    myCalibPolyU42b.set_coeffs(coeffsU42b)
+    myCalibPolyU42b.set_x_limits(2.1, 7.5)
+
+    myCalibPolyU42b.set_sampling_nb_points(20)
+    myCalibPolyU42b.set_reconstruction_method("INTERPOLATION")
+    myCalibPolyU42b.check_monotonic()
+    myCalibPolyU42b.compute_interpolation()
+
+    myCalibPolyU42b.print_info()
+
+    # get_y
+    print(f"myCalibPolyU42b.get_y(2.5) = { myCalibPolyU42b.get_y(2.5)}   (~17)")
+    print(f"myCalibPolyU42b.get_y(7) = { myCalibPolyU42b.get_y(7)}     (~35)")
+
+    # get_x
+    print(f"myCalibPolyU42b.get_x(35) = { myCalibPolyU42b.get_x(35)}  (~7) ")
+    print(f"myCalibPolyU42b.get_x(17) = { myCalibPolyU42b.get_x(17)}  (~2.5)")
+
+    if do_plot:
+        myCalibPolyU42b.plot()
+
+
 def demo_xcalibu_poly_cubic(do_plot):
     """
-    POLY cubic calibration
+    POLY cubic calibration from file
     """
 
     poly_cubic = Xcalibu(calib_file_name=XCALIBU_DIRBASE + "/examples/cubic_poly.calib",
                          reconstruction_method="INTERPOLATION")
 
-
-    poly_cubic.set_x_limits(1,5)
+    poly_cubic.set_x_limits(1, 5)
     poly_cubic.check_monotonic()
     poly_cubic.compute_interpolation()
     poly_cubic.print_info()
@@ -390,16 +417,17 @@ def main():
     print(" plot=", options.plot)
     print("--------------------------------------")
 
-    demo_xcalibu_1(options.plot)
-    demo_xcalibu_2(options.plot)
-    demo_xcalibu_3(options.plot)
-    demo_xcalibu_U32a(options.plot)
-    demo_xcalibu_table15(options.plot)
-    demo_xcalibu_cubic(options.plot)
-    demo_xcalibu_RingRy(options.plot)
-    demo_xcalibu_dynamic(options.plot)
-    demo_xcalibu_PolyB(options.plot)
-    demo_xcalibu_poly_cubic(options.plot)
+    #demo_xcalibu_1(options.plot)
+    #demo_xcalibu_2(options.plot)
+    #demo_xcalibu_3(options.plot)
+    #demo_xcalibu_U32a(options.plot)
+    #demo_xcalibu_table15(options.plot)
+    #demo_xcalibu_cubic(options.plot)
+    #demo_xcalibu_RingRy(options.plot)
+    #demo_xcalibu_dynamic_table(options.plot)
+    #demo_xcalibu_PolyB(options.plot)
+    demo_xcalibu_PolyU42b(options.plot)
+    #demo_xcalibu_poly_cubic(options.plot)
 
 if __name__ == "__main__":
     main()
