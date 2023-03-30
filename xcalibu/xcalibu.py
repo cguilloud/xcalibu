@@ -1039,9 +1039,10 @@ class Xcalibu:
 
         _sf.close()
 
-    def plot(self, *param):
+    def plot(self,  *param, save=False, file_name=None):
         """
         Use matplotlib to display calibration curve.
+        Plotted curves can be saved in pdf files.
         """
         # Load matplotlib but get rid of matplotlib debug.
         logging.getLogger().setLevel("INFO")
@@ -1051,7 +1052,6 @@ class Xcalibu:
         log.info(f"matplotlib version {matplotlib.__version__}")
 
         if self.get_calib_type() == "POLY":
-
             log.info(
                 f"Plotting POLY={self._polynomial} ; "
                 f"desc={self.get_calib_description()} ; name={self.get_calib_name()}"
@@ -1067,12 +1067,15 @@ class Xcalibu:
             # print("y_calc=", self.y_calc)
 
             if not param or "cal" in param:
-                plt.figure()
+                fig = plt.figure()
                 plt.plot(self.x_calc, self.y_calc, "r-", label="poly")
                 plt.xlabel("x")
                 plt.ylabel("y")
                 plt.title(self.get_calib_description())
                 plt.legend()
+
+                if save and file_name is not None:
+                    fig.savefig(file_name + ".pdf")
 
             # PLOT LIMITS
             # bottom, top = plt.xlim()
@@ -1083,14 +1086,18 @@ class Xcalibu:
             # plt.ylim(self.min_y(), self.max_y())
 
             if "inv" in param:
-                plt.figure()
+                fig = plt.figure()
                 plt.plot(self.y_calc, self.x_calc, "b-", label="reverse")
                 plt.xlabel("x")
                 plt.ylabel("y")
                 plt.title("REVERSE POLY")
                 plt.legend()
 
+                if save and file_name is not None:
+                    fig.savefig(file_name + "_inv.pdf")
+
             plt.show()
+
 
         elif self.get_calib_type() == "TABLE":
             log.info(
@@ -1099,6 +1106,7 @@ class Xcalibu:
             _rec_method = self.get_reconstruction_method()
 
             if _rec_method == "POLYFIT":
+                fig = plt.figure()
                 plt.plot(self.x_raw, self.y_raw, "o", self.x_fitted, self.y_fitted, "4")
                 plt.legend(
                     [
@@ -1108,17 +1116,24 @@ class Xcalibu:
                     loc="best",
                 )
                 plt.show()
+
+                if save and file_name is not None:
+                    fig.savefig(file_name + ".pdf")
+
             elif _rec_method == "INTERPOLATION":
                 if param is None or "cal" in param:
-                    plt.figure()
+                    fig = plt.figure()
                     plt.plot(self.x_raw, self.y_raw, "r-", label="raw data (x vs y)")
                     plt.xlabel("x")
                     plt.ylabel("y")
                     plt.title(self.get_calib_description())
                     plt.legend()
 
+                    if save and file_name is not None:
+                        fig.savefig(file_name + ".pdf")
+
                 if "var" in param:
-                    plt.figure()
+                    fig = plt.figure()
                     plt.plot(
                         self.x_raw,
                         self.y_raw - self.x_raw,
@@ -1130,8 +1145,11 @@ class Xcalibu:
                     plt.title(self.get_calib_description())
                     plt.legend()
 
+                    if save and file_name is not None:
+                        fig.savefig(file_name + "_var.pdf")
+
                 if "inv" in param:
-                    plt.figure()
+                    fig = plt.figure()
                     plt.plot(
                         self.y_raw, self.x_raw, "r-", label="inverse data (y vs x)"
                     )
@@ -1139,6 +1157,9 @@ class Xcalibu:
                     plt.ylabel("y")
                     plt.title(self.get_calib_description())
                     plt.legend()
+
+                    if save and file_name is not None:
+                        fig.savefig(file_name + "_inv.pdf")
 
                 # if self.is_monotonic:
                 #    # compute reverse plot

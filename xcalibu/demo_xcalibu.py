@@ -166,8 +166,9 @@ def demo_xcalibu_table15(do_plot):
     myCalibTable.print_info()
 
     if do_plot:
-        myCalibTable.plot()
-
+        # myCalibTable.plot("cal", "var", "inv") # , save=True, plot_file_name="fff")
+        # save : fff_cal.pdf  fff_var.pdf   fff_inv.pdf
+        myCalibTable.plot( "cal", "var", "inv", save=True, file_name="/tmp/toto")
 
 def demo_xcalibu_cubic(do_plot):
     """
@@ -289,7 +290,7 @@ def demo_xcalibu_PolyU42b(do_plot):
     myCalibPolyU42b.set_coeffs(coeffsU42b)
     myCalibPolyU42b.set_x_limits(2.1, 7.5)
 
-    myCalibPolyU42b.set_sampling_nb_points(20)
+    # myCalibPolyU42b.set_sampling_nb_points(20)
     myCalibPolyU42b.set_reconstruction_method("INTERPOLATION")
     myCalibPolyU42b.check_monotonic()
     myCalibPolyU42b.compute_interpolation()
@@ -421,7 +422,7 @@ def main():
     #demo_xcalibu_2(options.plot)
     #demo_xcalibu_3(options.plot)
     #demo_xcalibu_U32a(options.plot)
-    #demo_xcalibu_table15(options.plot)
+    # demo_xcalibu_table15(options.plot)
     #demo_xcalibu_cubic(options.plot)
     #demo_xcalibu_RingRy(options.plot)
     #demo_xcalibu_dynamic_table(options.plot)
