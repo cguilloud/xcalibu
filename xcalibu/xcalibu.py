@@ -278,7 +278,7 @@ class Xcalibu:
                 self.is_monotonic = False
                 self.is_increasing = None
                 log.info("calib is NOT monotonic")
-                log.info("y diff = ", y_diff)
+                # log.info("y diff = ", y_diff)
 
         if self.get_calib_type() == "POLY":
             log.info(f"check if poly is monotonic on {self.Xmin} {self.Xmax}")
@@ -735,7 +735,7 @@ class Xcalibu:
                 log.info(f"DATA lines read : {self._data_lines} in {_duration:g}s")
 
         except XCalibError:
-            print("\n--------------- ERROR IN PARSING --------------------")
+            print(f"\n--------------- ERROR IN PARSING ({self.get_calib_name()}) --------------------")
             print(sys.exc_info()[1])
             print("-E-----------------------------------------------------")
         finally:
@@ -880,7 +880,7 @@ class Xcalibu:
             self._poly_coeffs = list(self._polynomial.coef)
 
         except numpy.RankWarning:
-            print("[xcalibu.py] not enough data")
+            print(f"XCALIBU ({self.get_calib_name()}): ERROR: not enough data")
 
         self.x_fitted = numpy.linspace(self.Xmin, self.Xmax, 50)
         self.y_fitted = numpy.linspace(-100, 100, 50)
@@ -914,7 +914,7 @@ class Xcalibu:
         elif self.get_calib_type() == "TABLE":
             _order = self.get_fit_order()
         else:
-            print("[xcalibu.py] calc_poly_value : ERROR in calib type")
+            print(f"XCALIBU ({self.get_calib_name()}): ERROR in calib type")
 
         for ii in range(_order + 1):
             y = y + self._poly_coeffs[ii] * pow(x, ii)
@@ -945,7 +945,7 @@ class Xcalibu:
                         x = x + self.coeffR[_order - ii] * pow(y, ii)
                     return x
                 else:
-                    print("should try alternative method...")
+                    print(f"XCALIBU ({self.get_calib_name()}): ERROR: should try alternative method...")
 
         elif self.get_calib_type() == "TABLE":
             if (
@@ -960,10 +960,11 @@ class Xcalibu:
                         x = x + self.coeffR[_order - ii] * pow(y, ii)
                     return x
                 else:
-                    print("coeffR is None: no reverse poly calculated")
+                    raise RuntimeError(f"XCALIBU ({self.get_calib_name()}): ERROR: coeffR is None: no reverse poly calculated")
+                    print(f"XCALIBU ({self.get_calib_name()}): ERROR: coeffR is None: no reverse poly calculated")
 
         else:
-            print("[xcalibu.py] calc_reverse_value : ERROR in calib type")
+            print(f"XCALIBU ({self.get_calib_name()}): ERROR: calc_reverse_value : ERROR in calib type")
 
     def calc_interpolated_value(self, x):
         """
@@ -984,7 +985,7 @@ class Xcalibu:
         _file_name = self.get_calib_file_name()
 
         if _file_name is None:
-            print("[xcalibu.py] impossible to save : no calib file defined")
+            print(f"XCALIBU ({self.get_calib_name()}): ERROR: unable to save : no calib file defined")
         else:
             self._save_calib_file()
 
@@ -1035,14 +1036,16 @@ class Xcalibu:
             for ii in range(self.get_calib_order() + 1):
                 _sf.write("C%d = %f\n" % (ii, self._poly_coeffs[ii]))
         else:
-            print("[xcalibu.py] ERROR")
+            print(f"XCALIBU ({self.get_calib_name()}): _save_calib_file ERROR: ???")
 
         _sf.close()
 
-    def plot(self,  *param, save=False, file_name=None):
+    def plot(self, *param, display=True, save=False, file_name=None):
         """
-        Use matplotlib to display calibration curve.
-        Plotted curves can be saved in pdf files.
+        Use matplotlib to create calibration curves.
+        Curves can be:
+        * saved in pdf files (save=True)
+        * plotted (excepte if display=False)
         """
         # Load matplotlib but get rid of matplotlib debug.
         logging.getLogger().setLevel("INFO")
@@ -1096,7 +1099,8 @@ class Xcalibu:
                 if save and file_name is not None:
                     fig.savefig(file_name + "_inv.pdf")
 
-            plt.show()
+            if display:
+                plt.show()
 
 
         elif self.get_calib_type() == "TABLE":
@@ -1115,13 +1119,16 @@ class Xcalibu:
                     ],
                     loc="best",
                 )
-                plt.show()
+
+                if display:
+                    plt.show()
 
                 if save and file_name is not None:
                     fig.savefig(file_name + ".pdf")
 
             elif _rec_method == "INTERPOLATION":
-                if param is None or "cal" in param:
+
+                if not param or "cal" in param:
                     fig = plt.figure()
                     plt.plot(self.x_raw, self.y_raw, "r-", label="raw data (x vs y)")
                     plt.xlabel("x")
@@ -1161,17 +1168,14 @@ class Xcalibu:
                     if save and file_name is not None:
                         fig.savefig(file_name + "_inv.pdf")
 
-                # if self.is_monotonic:
-                #    # compute reverse plot
-                #    x_rawR =
-                #    y_rawR =
+                if display:
+                    plt.show()
 
-                plt.show()
             else:
                 log.error("plot : Unknown method : %s" % _rec_method)
 
         else:
-            print("OH OH do not know this calib type :(")
+            print(f"XCALIBU ({self.get_calib_name()}): ERROR: OH OH do not know this calib type :(")
 
     def print_table(self):
         for x, y in zip(self.x_raw, self.y_raw):
@@ -1274,7 +1278,6 @@ class Xcalibu:
 
         if self.is_in_valid_x_range(x):
             if self.get_calib_type() == "TABLE":
-
                 _rec_method = self.get_reconstruction_method()
                 if _rec_method == "POLYFIT":
                     y = self.calc_poly_value(x)
@@ -1292,19 +1295,22 @@ class Xcalibu:
 
             log.debug("y=%f" % y)
             return y
-        else:
-            log.error(
-                f"xcalibu - Error : x={x} is not in valid range for calibration {self.get_calib_name()}"
-            )
 
-            raise XCalibError(
-                "X value %g is out of limits [%g;%g]" % (x, self.Xmin, self.Xmax), self
-            )
+        else:
+            print(f"XCALIBU ({self.get_calib_name()}): Warning:get_y_scalar({x}) -> nan")
+            return numpy.nan
+#        else:
+#            log.error(
+#                f"xcalibu - Error : x={x} is not in valid range for calibration {self.get_calib_name()}"
+#            )
+#
+#            raise XCalibError(
+#                "X value %g is out of limits [%g;%g]" % (x, self.Xmin, self.Xmax), self
+#            )
 
     """
     Reciprocal calibration
     """
-
     def get_x(self, y):
         """
         y: int or float or numpy array of floats.
@@ -1341,13 +1347,16 @@ class Xcalibu:
             x = self.calc_reverse_value(y)
             log.debug(f"x={x}")
             return x
+#        else:
+#            # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax), self)
+#            log.error(
+#                f"xcalibu - Error : y={y} is not in valid range for this R calibration ({self.get_calib_name()})"
+#            )
+#            return -1
         else:
-            # raise XCalibError("YValue out of limits [%g;%g]"%(self.Ymin,self.Ymax), self)
-            log.error(
-                "xcalibu - Error : y=%f is not in valid range for this R calibration (self.get_calib_name())"
-                % y
-            )
-            return -1
+            print(f"XCALIBU ({self.get_calib_name()}): Warning:get_x_scalar({y}) -> nan")
+            return numpy.nan
+
 
     def delete(self, x=None, y=None):
         """

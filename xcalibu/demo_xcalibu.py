@@ -168,7 +168,12 @@ def demo_xcalibu_table15(do_plot):
     if do_plot:
         # myCalibTable.plot("cal", "var", "inv") # , save=True, plot_file_name="fff")
         # save : fff_cal.pdf  fff_var.pdf   fff_inv.pdf
-        myCalibTable.plot( "cal", "var", "inv", save=True, file_name="/tmp/toto")
+        myCalibTable.plot( "cal", "var", "inv", display=False, save=True, file_name="/tmp/toto")
+
+
+    print("ffffffffffffffffffffffffff")
+
+
 
 def demo_xcalibu_cubic(do_plot):
     """
@@ -336,6 +341,32 @@ def demo_xcalibu_poly_cubic(do_plot):
         poly_cubic.plot()
 
 
+def demo_xcalibu_table_non_monotonic(do_plot):
+    """
+    TABLE non monotonic
+    """
+
+    calib_nmt = Xcalibu(calib_type="TABLE",
+                        calib_file_name=XCALIBU_DIRBASE + "/examples/U32a_table_non_monotonic.txt",
+                        reconstruction_method="INTERPOLATION")
+
+    calib_nmt.check_monotonic()
+    calib_nmt.compute_interpolation()
+    calib_nmt.print_info()
+
+    print(f" calib_nmt.get_y( 1 ) = {calib_nmt.get_y(1)}")
+    print(f" calib_nmt.get_y( 0 ) = {calib_nmt.get_y(0)}")
+    print(f"calib_nmt.get_y( -5 ) = {calib_nmt.get_y(-5)}")
+    print(f"calib_nmt.get_y( -9 ) = {calib_nmt.get_y(-9)}")
+    print("--------------------------------------------------")
+    print(f"calib_nmt.get_x( 12 ) = {calib_nmt.get_x(12)}")
+
+
+    print("--------------------------------------------------")
+
+    if do_plot:
+        calib_nmt.plot()
+
 '''
 def demo_xcalibu_(do_plot):
     """
@@ -427,8 +458,9 @@ def main():
     #demo_xcalibu_RingRy(options.plot)
     #demo_xcalibu_dynamic_table(options.plot)
     #demo_xcalibu_PolyB(options.plot)
-    demo_xcalibu_PolyU42b(options.plot)
+    # demo_xcalibu_PolyU42b(options.plot)
     #demo_xcalibu_poly_cubic(options.plot)
+    demo_xcalibu_table_non_monotonic(options.plot)
 
 if __name__ == "__main__":
     main()
