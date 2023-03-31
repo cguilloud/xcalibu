@@ -1,62 +1,65 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# xcalibu.py
-# Calibration Manager
-#
-# Xcalibu is python code to deal with calibrations data:
-#  * load / save from file, string, list, numpy array
-#  * fit tables (using numpy)
-#  * interpolate (using scipy)
-#
-# The Xcalibu class mainly provides the following method :
-#   get_y(x) which returns the f(x) fitted value.
-#
-# If using TABLE, the class can perform the fit of the raw data and
-# furnishes a y=f(x) polynomial function.
-#
-# The returned value is calculated by various reconstruction methods
-# depending on the calibration type and parameters.
-#   TABLE ----> INTERPOLATION   |  POLYFIT
-#   POLY  ----> POLY (Direct calculation)
-#
-# The reverse function "get_x(y)" is also available.
-# Take care : get_x(get_y(x)) can be different from x due to
-# approximation.
-#
-# Meta-data of a calibration (fixed at calib recording/generation) are:
-# * CALIB_NAME
-# * CALIB_TYPE
-# * CALIB_TIME
-# * CALIB_DESC
-#
-# and 3 more for polynoms (min and max are automatically calculated for TABLES):
-# * CALIB_XMIN
-# * CALIB_XMAX
-# * CALIB_ORDER
-#
-# Usage parameters (parameters that a user can change to use its
-# calibration):
-# * RECONSTRUCTION_METHOD : POLYFIT or INTERPOLATION
-# * FIT_ORDER (for a TABLE calib and POLYFIT reconstruction_method)
-#
-# Ndp: https://www.desmos.com/calculator?lang=fr
+"""
+xcalibu.py
+
+Calibration Manager
+
+Xcalibu is python code to deal with calibrations data:
+ * load / save from file, string, list, numpy array
+ * fit tables (using numpy)
+ * interpolate (using scipy)
+
+The Xcalibu class mainly provides the following method :
+  get_y(x) which returns the f(x) fitted value.
+
+If using TABLE, the class can perform the fit of the raw data and
+furnishes a y=f(x) polynomial function.
+
+The returned value is calculated by various reconstruction methods
+depending on the calibration type and parameters.
+  TABLE ----> INTERPOLATION   |  POLYFIT
+  POLY  ----> POLY (Direct calculation)
+
+The reverse function "get_x(y)" is also available.
+Take care : get_x(get_y(x)) can be different from x due to
+approximation.
+
+Meta-data of a calibration (fixed at calib recording/generation) are:
+* CALIB_NAME
+* CALIB_TYPE
+* CALIB_TIME
+* CALIB_DESC
+
+and 3 more for polynoms (min and max are automatically calculated for TABLES):
+* CALIB_XMIN
+* CALIB_XMAX
+* CALIB_ORDER
+
+Usage parameters (parameters that a user can change to use its
+calibration):
+* RECONSTRUCTION_METHOD : POLYFIT or INTERPOLATION
+* FIT_ORDER (for a TABLE calib and POLYFIT reconstruction_method)
+
+Ndp: https://www.desmos.com/calculator?lang=fr
+"""
 
 
 import logging
 import numbers
-import numpy
-from numpy.polynomial.polynomial import Polynomial
-from operator import itemgetter
 import os
 import re
-from scipy import interpolate
 import sys
 import time
 
-#
+import numpy
+from numpy.polynomial.polynomial import Polynomial
+from scipy import interpolate
+
+
 # TODO: to automatize check_mono and compute_interpolation for dynamic calib ?
-#
+
 
 try:
     import timedisplay
@@ -82,10 +85,13 @@ class XCalibError(Exception):
             self.message += f" calib name = {calib.get_calib_name()}"
 
     def __str__(self):
-        return "XCALIBU error: %s" % self.message
+        return f"XCALIBU error: {self.message}"
 
 
 class Xcalibu:
+    """
+    Main class to create a calibration.
+    """
     def __init__(
         self,
         calib_name=None,
@@ -124,6 +130,10 @@ class Xcalibu:
 
         self.is_monotonic = None
         self.is_increasing = None
+
+        self.x_raw = None
+        self.y_raw = None
+
         self.Xmin = numpy.nan
         self.Xmax = numpy.nan
         self.Ymin = numpy.nan
@@ -305,7 +315,7 @@ class Xcalibu:
             # real_valid_roots
             if len(real_valid_roots) == 0:
                 self.is_monotonic = True
-                log.info(f"This poly is monotonic on [{self.Xmin};{self.Xmax}] ")
+                log.info("This poly is monotonic on [%g;%g]", self.Xmin, self.Xmax)
             else:
                 self.is_monotonic = False
                 log.info(
@@ -313,12 +323,12 @@ class Xcalibu:
                     f"{self.Xmax}] (real root(s) of the derivative: {real_valid_roots})"
                 )
 
-    def set_calib_file_name(self, fn):
+    def set_calib_file_name(self, file_name):
         """
         Set name of the file to use to load/save a calibration.
         """
-        log.debug("set_calib_file_name(%s)" % fn)
-        self._calib_file_name = fn
+        log.debug("set_calib_file_name(%s)", file_name)
+        self._calib_file_name = file_name
         # log.info(f"Calib file name set to: \"{self.get_calib_file_name()}\"")
 
     def get_calib_file_name(self):
@@ -757,10 +767,6 @@ class Xcalibu:
                 % (self.Ymin, self.Ymax, _nb_points)
             )
 
-            # Ensure data is sorted in ascending order
-        #    sorted_pairs = sorted(zip(_xvalues, _yvalues), key=itemgetter(0))
-        #    _xvalues, _yvalues = [list(tuple) for tuple in zip(*sorted_pairs)]
-
         self.x_raw = numpy.array(_xvalues)
         self.y_raw = numpy.array(_yvalues)
 
@@ -876,7 +882,6 @@ class Xcalibu:
             self._polynomial = numpy.polynomial.polynomial.Polynomial.fit(
                 self.x_raw, self.y_raw, _order, window=[self.Xmin, self.Xmax]
             )
-            log.info("Polynomial  =", self._polynomial)
             self._poly_coeffs = list(self._polynomial.coef)
 
         except numpy.RankWarning:
