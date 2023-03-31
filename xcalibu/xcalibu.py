@@ -1293,7 +1293,7 @@ class Xcalibu:
             else:
                 log.error("Unknown calibration type: %s" % self.get_calib_type())
 
-            log.debug("y=%f" % y)
+            log.debug(f"y={y}")
             return y
 
         else:
