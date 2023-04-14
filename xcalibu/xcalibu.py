@@ -614,6 +614,7 @@ class Xcalibu:
                     if self.get_calib_type() == "TABLE":
 
                         # Match lines like: 13.123000  (1 column format)
+                        # 
                         matchPoint = re.search(
                             r"^([+-]?\d+\.?\d*[eE]?[+-]*\d*)$",
                             line,
@@ -640,6 +641,7 @@ class Xcalibu:
                             else:
 
                                 # Match lines like:  U35M [13.000000] = 15.941000 (XCALIBU format)
+                                #                    U35M[0.8e-2] = -0.83e-02
                                 # name of the calib (U35M) must be known.
                                 if self.get_calib_name() is None:
                                     raise XCalibError(
@@ -649,10 +651,10 @@ class Xcalibu:
                                     )
                                 else:
                                     # ()      : save recognized group pattern
-                                    # %s      : for the % subs in the string...
+                                    # %s      : substitution of the calib name in regex string
                                     # .       : any character except a newline
-                                    # (?: re) : Groups regular expressions without remembering matched text.
-                                    # \s      : Whitespace, equivalent to [\t\n\r\f].
+                                    # (?: re) : Groups regular expressions without remembering matched text
+                                    # \s      : Whitespace, equivalent to [\t\n\r\f]
                                     matchPoint = re.search(
                                         r"%s(?:\s*)\[(.+)\](?:\s*)=(?:\s*)(.+)"
                                         % self.get_calib_name(),
@@ -704,8 +706,9 @@ class Xcalibu:
                     elif self.get_calib_type() == "POLY":
                         # Matches lines like :
                         # C0 = 28.78
+                        # C3 = 8.93556e-10
                         matchCoef = re.search(
-                            r"\s*C(\d+)\s*=\s*([-+]?\d*\.\d+|\d+)", line, re.M | re.I
+                            r"\s*C(\d+)\s*=\s*([+-]?\d+\.?\d*[eE]?[+-]*\d*)", line, re.M | re.I
                         )
                         if matchCoef:
                             _data_line_nb = _data_line_nb + 1

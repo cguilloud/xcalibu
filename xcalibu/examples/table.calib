@@ -9,7 +9,7 @@ CALIB_TIME = 1400081171.300155
 CALIB_DESC = "test table : example of matching lines"
 #CALIB_TITI = 14
 
-B52[0.8e-2] = -0.83e-2
+B52[0.8e-2] = -0.83e-02
 B52[1]=1
 B52[3]= 2
 B52[5]=-12
