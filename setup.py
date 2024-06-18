@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="xcalibu",
-    version="0.9.9",
+    version="1.0.0",
     description="Calibration library",
     long_description=long_description,
     long_description_content_type="text/markdown",
