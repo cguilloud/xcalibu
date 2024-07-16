@@ -58,16 +58,6 @@ from numpy.polynomial.polynomial import Polynomial
 from scipy import interpolate
 
 
-# TODO: to automatize check_mono and compute_interpolation for dynamic calib ?
-
-
-try:
-    import timedisplay
-
-    TIME_DISPLAY_FOUND = True
-except ImportError:
-    TIME_DISPLAY_FOUND = False
-
 log = logging.getLogger("XCALIBU")
 LOG_FORMAT = "%(name)s - %(levelname)s - %(message)s"
 
@@ -905,10 +895,7 @@ class Xcalibu:
         # Fit duration display.
         _fit_duration = time.perf_counter() - _time0
 
-        if TIME_DISPLAY_FOUND:
-            log.info("Fitting tooks %s" % timedisplay.duration_format(_fit_duration))
-        else:
-            log.info("Fitting tooks %s" % _fit_duration)
+        log.info("Fitting tooks %s" % _fit_duration)
 
     def calc_poly_value(self, x):
         """
@@ -1600,9 +1587,6 @@ def main():
         _ytest = myCalib.get_y(_xtest)
         _calc_duration = time.perf_counter() - _time0
 
-        if TIME_DISPLAY_FOUND:
-            _calc_duration = timedisplay.duration_format(_calc_duration)
-
         log.info("y value of %g = %g (%s)" % (_xtest, _ytest, _calc_duration))
 
         # bench example : calculation of some points.
@@ -1613,9 +1597,6 @@ def main():
             yy = myCalib.get_y(xx)
             # log.info( " f(%06.3f)=%06.3f   "%(xx, yy),)
         _Ncalc_duration = time.perf_counter() - _time0
-
-        if TIME_DISPLAY_FOUND:
-            _Ncalc_duration = timedisplay.duration_format(_Ncalc_duration)
 
         log.info(
             "Calculation of %d values of y. duration : %s"
