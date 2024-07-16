@@ -276,19 +276,20 @@ class Xcalibu:
             y_diff = numpy.diff(self.y_raw)
             # print(y_diff)
 
-            if numpy.all(y_diff > 0):
+            if numpy.all(y_diff >= 0):
                 self.is_monotonic = True
                 self.is_increasing = True
                 log.info("calib is MONOTONIC INCREASING")
-            elif numpy.all(y_diff < 0):
+            elif numpy.all(y_diff <= 0):
                 self.is_monotonic = True
                 self.is_increasing = False
                 log.info("calib is MONOTONIC DECREASING")
             else:
                 self.is_monotonic = False
                 self.is_increasing = None
-                log.info("calib is NOT monotonic")
+                log.info("calib is NOT STRICTLY monotonic")
                 # log.info("y diff = ", y_diff)
+                # print(":", y_diff[y_diff<0])
 
         if self.get_calib_type() == "POLY":
             log.info(f"check if poly is monotonic on {self.Xmin} {self.Xmax}")
