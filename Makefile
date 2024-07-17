@@ -23,7 +23,7 @@ DEV_PATH=${PWD}
 # Copy of files from current git repository.
 install:
         ####  install of the py module.
-	python setup.py install
+	pip install .
 
         ####  config dir and template files.
 	mkdir -p ${TEMPLATES_PATH}
